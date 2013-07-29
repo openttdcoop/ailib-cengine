@@ -1,0 +1,44 @@
+You can download AIVehicleTest if you want see how the library work with an AI.
+
+
+Here's an example on using GetBestEngine() function using your own filter function that do the same as the default filter except it enable bypass and remove engine with a speed lower 10. And an example howto setup the call and howto create the vehicle.
+
+functio myclass::mysimpleheuristic(engine_id, cargo_id)
+{
+	local capacity = cEngineLib.GetCapacity(engine_id, cargo_id);
+	local speed = cEngineLib.GetMaxSpeed(engine_id);
+	return (capacity * speed);
+}
+
+function myclass::myfilter(FilterList, engineobject)
+{
+	cEngineLib.EngineFilter(FilterList, engineobject.cargo_id, engineobject.engine_roadtype, -1, true);
+	// same as default filter except enabling bypass
+
+	FilterList.Valuate(AIEngine.GetMaxSpeed); // FilterList is an AIList holding a list of engine
+	FilterList.RemoveBelowValue(10);
+	
+	// now applying some heuristic
+	FilterList.Valuate(myclass.mysimpleheuristic, engineobject.cargo_id);
+	FilterList.Sort(AIList.SORT_BY_VALUE, false); // bigger number first, the function expect the 1st item to be the better
+}
+
+Then, setup and call the function :
+
+local mywish = cEngineLib.Infos();
+mywish.depot = x; // a valid depot. We could use mywish.depot = -1; to get theorical result
+mywish.cargo_id = z; // a valid cargo_id
+local besttram = cEngineLib.GetBestEngine(mywish, myclass.myfilter);
+if (besttram[0] == -1) { AILog.Info("error"); return; } // not enough money, filter was too hard and no engine match, or any other error
+if (cEngineLib.CreateVehicle(mywish.depot, besttram[0], mywish.cargo_id) == -1)	{} // error, else we get vehicleID...
+
+
+Note about the theorical result and real result:
+Say you want carry wood with trains
+In theorical result : your best loco will be X, and your best wagon will be Y
+And in real result, in fact X cannot be use with Y, so difference is that you end with : best loco X best wagon Z or best loco H best wagon Y.
+And the lib gets more accurate then, and next theorical query will knows X cannot be use with Y and won't gave X+Y as answer.
+
+The lib depend then on how you handle your filtering of engine to find the best one, default filter remove incompatible engine, but if you build a custom filter that don't, the theorical result will always says X+Y, and the real result will find the good result, but after testing and see that XY isn't a possible couple, so you will just loose time & money and all the engines will be tested until one couple match.
+A bad filter that don't even check if the wagon can run on the same rails as the loco, would gave a XY bad couple.
+The default filtering isn't that bad, the heuristic is kinda bad, so make your own, but keep in mind that the filtering count on the result.
