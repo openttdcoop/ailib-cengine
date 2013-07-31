@@ -1,5 +1,48 @@
-You can download AIVehicleTest if you want see how the library work with an AI.
+You can download AIVehicleTest (bananas) if you want see how the library works with an AI.
 
+- Money
+Right now (and it will never be), the library doesn't handle your account. This mean that you must make sure a function that will use money have a good amount of cash available to use.
+The library try its best to not spend your money (buying & selling fast engine/wagon), but still need money :D
+I may add a function to allow the library to callback a "i want money" function from your AI if i see that need from users.
+
+- newGRF
+Many newGRF add weirdness at handling engines (like that loco cannot use that wagon...)
+The library use a generic handling that should handle nearly all specials cases. By "nearly" i mean ones i'm not aware of, you can report those non handle specials cases.
+There's only one special case at handling newGRF for now, the 2cc trainset, so the library handle it.
+There's still other weirdness in 2cc that the library doesn't handle itself, but the library don't use them and won't get affect (but your AI could).
+
+- The library extends AIEngine
+This mean any AIEngine functions can be use using the library name (ie: cEngineLib.GetName will trigger AIEngine.GetName). But doing it will allow the library to catch any engine properties itself and discover new engine... So using this will higher the library accuracy.
+
+- The cEngineLib.Infos object
+The library may alter the object properties itself, but one property is never alter in all cases, and not use if not used with train, the bypass property. This to say if you want pass an extra parameter to your custom filter, when not using a filter for train, you can safely use bypass to hold it.
+If you need to pass more than one extra parameter (or just one but using train), you can derive your own object with the properties you wish in it. Then use that new object to use it with the library, as long as the object is working like the original one.
+Here's how you can do that :
+class mybiggerobject extends cEngineLib.Infos
+{
+	one_extra : null;
+	two_extra : null;
+	constructor()
+		{
+		cEngineLib.Infos.constructor();
+		this.one_extra = AIList();
+		this.two_extra = "another extra param";
+		}
+}
+
+- Public and private functions
+Glad for you, squirrel doesn't have a real private/public handling, so you can use the private functions too. But remember private functions lack a lot of check and just assume most of the time that parameters are valid. It's not bad as the public functions using private functions makes the checks before calling them (well maybe not, but that would be a bug). So if you want use private functions, make sure you do checks before calling them, else unexpected results may goes upto the API crash (and it means your AI crash too)
+
+- Theorical result and real result:
+Say you want carry wood with trains
+In theorical result : your best loco will be X, and your best wagon will be Y
+And in real result, in fact X cannot be use with Y, so difference is that you end with : best loco X best wagon Z or best loco H best wagon Y.
+And the lib gets more accurate then, and next theorical query will knows X cannot be use with Y and won't gave X+Y as answer.
+
+- Finding best engine
+The lib depend then on how you handle your filtering of engine to find the best one, default filter remove incompatible engine, but if you build a custom filter that don't, the theorical result will always says X+Y, and the real result will find the good result, but after testing and see that XY isn't a possible couple, so you will just loose time & money and all the engines will be tested until one couple match.
+A bad filter that don't even check if the wagon can run on the same rails as the loco, would gave a XY bad couple.
+The default filtering isn't that bad, the heuristic is kinda bad, so make your own, but keep in mind that the filtering count on the result.
 
 Here's an example on using GetBestEngine() function using your own filter function that do the same as the default filter except it enable bypass and remove engine with a speed lower 10. And an example howto setup the call and howto create the vehicle.
 
@@ -32,13 +75,3 @@ local besttram = cEngineLib.GetBestEngine(mywish, myclass.myfilter);
 if (besttram[0] == -1) { AILog.Info("error"); return; } // not enough money, filter was too hard and no engine match, or any other error
 if (cEngineLib.CreateVehicle(mywish.depot, besttram[0], mywish.cargo_id) == -1)	{} // error, else we get vehicleID...
 
-
-Note about the theorical result and real result:
-Say you want carry wood with trains
-In theorical result : your best loco will be X, and your best wagon will be Y
-And in real result, in fact X cannot be use with Y, so difference is that you end with : best loco X best wagon Z or best loco H best wagon Y.
-And the lib gets more accurate then, and next theorical query will knows X cannot be use with Y and won't gave X+Y as answer.
-
-The lib depend then on how you handle your filtering of engine to find the best one, default filter remove incompatible engine, but if you build a custom filter that don't, the theorical result will always says X+Y, and the real result will find the good result, but after testing and see that XY isn't a possible couple, so you will just loose time & money and all the engines will be tested until one couple match.
-A bad filter that don't even check if the wagon can run on the same rails as the loco, would gave a XY bad couple.
-The default filtering isn't that bad, the heuristic is kinda bad, so make your own, but keep in mind that the filtering count on the result.

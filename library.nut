@@ -28,7 +28,7 @@ class cEngineLib extends AILibrary
     function GetAPIVersion()  { return "1.2"; }
     function GetDate()        { return "2013-07-23"; }
     function CreateInstance() { return "cEngineLib"; }
-	function GetUrl()			{ return "http://www.tt-forums.net/viewtopic.php?f=65&t=61040"; }
+	function GetURL()			{ return "http://www.tt-forums.net/viewtopic.php?f=65&t=67122"; }
     function GetCategory()    { return "Library"; }
 }
 

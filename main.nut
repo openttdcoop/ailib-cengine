@@ -22,13 +22,15 @@ class cEngineLib extends AIEngine
 {
 	static	enginedatabase = {};
 	static	EngineBL = AIList();
+	static	RailType = AIList();	// item = the railtype, value = maximum speed doable
+	static	APIConfig = [false,""];	// hold configuration options and error message, you have functions to alter that.
 
 	engine_id		= null;	// id of the engine
 	cargo_capacity	= null;	// capacity per cargo item=cargoID, value=capacity when refit
 	cargo_price		= null;	// price to refit item=cargoID, value=refit cost
 	cargo_length	= null;	// that's the length of a vehicle depending on its current cargo setting
 	is_known		= null;	// -1 seen that engine, -2 tests already made
-	incompatible	= null;	// AIList of wagons imcompatible with a train engine
+	usuability		= null;	// compatibility list of wagons & locos, item=the other engine value=state : -1 incompatible, 1 compatible
 	
 	constructor()
 		{
@@ -37,11 +39,11 @@ class cEngineLib extends AIEngine
 		cargo_price		= AIList();
 		cargo_length	= AIList();
 		is_known		= -1;
-		incompatible	= AIList();
+		usuability		= AIList();
 		}
 
-	// ********************** //
-	// PUBLIC FUNCTIONS - API //
+	  // ********************** //
+	 // PUBLIC FUNCTIONS - API //
 	// ********************** //
 
 	function UpdateEngineProperties(veh_id)
@@ -69,7 +71,7 @@ class cEngineLib extends AIEngine
 	 * @param filter A function that will be called to apply your own filter and heuristic on the engine list. If null a private function will be used.
 	 *               The function must be : function myfilter(AIList, object)
      *               For VT_RAIL that function will be called with two different list, 1 for locomotive, and 2nd for the wagon. So be sure to check if IsWagon(object.engine_id) to see if you work for a train or a wagon.
-	 * @return An array with the best engines : [0]= -1 not found, [0]=engine_id water/air/road, [0]=engine_id & [1]=wagon_id for rail.
+	 * @return An array with the best engines : [0]= -1 not found, [0]=engine_id water/air/road, rail : [0]=loco_id [1]=wagon_id [2] railtype
 	 */
 
 	function EngineFilter(engine_list, cargo_id, road_type, engine_id, bypass) {}
@@ -101,19 +103,19 @@ class cEngineLib extends AIEngine
 	 * @return length of engine or null on error
 	 */
 
-	function IsLocomotive(engine_id) {}
-	/**
-	 * Check if an engine is a locomotive
-	 * @param engine_id the engine to check
-	 * @return True if it's a locomotive, false if not or invalid...
-	 */
-
 	function GetCapacity(engine_id, cargo_id = -1) {}
 	/**
 	 * Get the capacity of an engine for that cargo type
 	 * @param engine_id The engine to get the capacity of
 	 * @param cargo_id If -1, it's the current refit cargo, else the cargo id to get the capacity for.
 	 * @return the capacity, 0 if the cargo is not support or on error
+	 */
+
+	function IsLocomotive(engine_id) {}
+	/**
+	 * Check if an engine is a locomotive
+	 * @param engine_id the engine to check
+	 * @return True if it's a locomotive, false if not or invalid...
 	 */
 
 	function IncompatibleEngine(engine_one, engine_two) {}
@@ -124,12 +126,20 @@ class cEngineLib extends AIEngine
 	 * @param engine_two engine id of the second engine
 	 */
 
+	function CompatibleEngine(engine_one, engine_two) {}
+	/**
+	 * Mark engine_one and engine_two compatible with each other
+	 * This could only be seen with trains
+	 * @param engine_one engine id of the first engine
+	 * @param engine_two engine id of the second engine
+	 */
+
 	function AreEngineCompatible(engine, compare_engine) {}
 	/**
 	 * Check if engine1 is usable with engine2. For trains/wagons only.
 	 * @param engine_one engine id of the first engine
 	 * @param engine_two engine id of the second engine
-	 * @return true if you can use them
+	 * @return true if you can use them, if we never check their compatibilities, it will return true
 	 */
 
 	function GetPrice(engine_id, cargo_id = -1)	{}
@@ -174,9 +184,35 @@ class cEngineLib extends AIEngine
 
 	function EngineCacheInit()	{}
 	/**
-	 * This will browse road vehicles so they are all added to the engine database, faster the next time you will try to pull any road vehicle properties.
-	 * If you want use this, it should be called early in your AI, else it have no usage
+	 * This will browse engines so they are all added to the engine database, faster the next access to any engine properties.
+	 * If you want use this, it should be called early in your AI, else its usage will get poorer while the API fill the database itself.
 	 */
+
+	function GetBestRailType(engineID = -1)	{}
+	/**
+	 * This will browse railtype and return the railtype that can reach the maximum speed
+	 * @param engineID the engineID to get its best railtype to use with it, if -1 get the current best railtype
+	 * @return -1 if no railtype is found
+	 */
+
+	function GetTrainMaximumSpeed()	{}
+	/**
+	 * This return the current maximum reachable speed (limit by train speed capacity and railtype speed limitpe
+	 * @return The current maximum speed, -1 if no trains can be found
+	 */
+
+	function SetAPIErrorHandling(output)	{}
+	/**
+	 * Enable or disable errors message. Those are only errors at using the API, not errors report by the NOAI API
+	 * @param output True and the API will output its errors messages. False to disable this. You can still get the last error with GetAPIError
+	 */
+
+	function GetAPIError()	{}
+	/**
+	 * Get the last error string the API report
+	 * @return A string.
+	 */
+
 }
 
 	function cEngineLib::UpdateEngineProperties(veh_id)
@@ -208,18 +244,284 @@ class cEngineLib extends AIEngine
 		engObj.is_known = -2;
 	}
 
+	function cEngineLib::GetBestEngine(object, filter)
+	{
+		local isobject = object instanceof cEngineLib.Infos;
+		local error = []; error.push(-1);
+		if (!isobject)	{ cEngineLib.ErrorReport("object must be a cEngineLib.Infos instance"); return error; }
+		cEngineLib.CheckEngineObject(object);
+		if (object.cargo_id == -1)	{ cEngineLib.ErrorReport("cargo_id must be a valid cargo"); return error; }
+		if (object.depot == -1 && object.engine_type == -1)	{ cEngineLib.ErrorReport("object.engine_type must be set when the depot doesn't exist"); return error; }
+		local all_engineList = AIEngineList(object.engine_type);
+		local filter_callback = cEngineLib.Filter_EngineGeneric;
+		local filter_callback_params = [];
+		if (object.engine_type == AIVehicle.VT_RAIL)	filter_callback = cEngineLib.Filter_EngineTrain;
+		filter_callback_params.push(all_engineList);
+		filter_callback_params.push(object);
+		if (filter != null)
+					{
+					if (typeof(filter) != "function")	{ cEngineLib.ErrorReport("filter must be a function"); return error; }
+					filter_callback = filter;
+					}
+		local result = [];
+		// prepare trains work
+		local oTrain, oWagon, train_list, wagon_list, filter_callback_train, filter_callback_wagon;
+		if (object.engine_type == AIVehicle.VT_RAIL)
+			{
+			oTrain = cEngineLib.Infos();
+			oWagon = cEngineLib.Infos();
+			oWagon.depot = object.depot;
+			oWagon.cargo_id = object.cargo_id;
+			oWagon.engine_type = AIVehicle.VT_RAIL;
+			oWagon.bypass = object.bypass;
+			cEngineLib.CheckEngineObject(oWagon);
+			oTrain.depot = object.depot;
+			oTrain.cargo_id = object.cargo_id;
+			oTrain.engine_type = AIVehicle.VT_RAIL;
+			oTrain.bypass = object.bypass;
+			cEngineLib.CheckEngineObject(oTrain);
+			train_list = AIEngineList(object.engine_type);
+			wagon_list = AIEngineList(object.engine_type);
+			filter_callback_train = [];
+			filter_callback_train.extend(filter_callback_params);
+			filter_callback_wagon = [];
+			filter_callback_wagon.extend(filter_callback_params);
+			filter_callback_train[0] = train_list;
+			filter_callback_train[1] = oTrain;
+			filter_callback_wagon[0] = wagon_list;
+			filter_callback_wagon[1] = oWagon;
+			wagon_list.Valuate(AIEngine.IsWagon);
+			train_list.Valuate(AIEngine.IsWagon);
+			wagon_list.KeepValue(1);
+			train_list.KeepValue(0);
+			}
+		if (object.depot == -1) // theorical results
+			{
+			if (object.engine_type != AIVehicle.VT_RAIL)
+				{
+				result.push(cEngineLib.GetCallbackResult(filter_callback, filter_callback_params));
+				return result;
+				}
+			if (object.engine_id != -1)
+					{
+					local back = null;
+					if (AIEngine.IsWagon(object.engine_id))
+							{ // find a train to pull that wagon
+							oTrain.engine_id = object.engine_id;
+							oTrain.engine_routetype = cEngineLib.GetBestRailType(object.engine_id);
+							back = cEngineLib.GetCallbackResult(filter_callback, filter_callback_train);
+							if (back != -1)	{ result.push(back); result.push(object.engine_id); result.push(oTrain.engine_routetype); return result; }
+									else	return error;
+							}
+					else	{ // find a wagon for that train
+							oWagon.engine_id = object.engine_id;
+							oWagon.engine_roadtype = cEngineLib.GetBestRailType(object.engine_id);
+							back = cEngineLib.GetCallbackResult(filter_callback, filter_callback_wagon);
+							if (back != -1)	{ result.push(object.engine_id); result.push(back); result.push(oWagon.engine_routetype); return result; }
+									else	return error;
+							}
+					}
+			// theory, train, no engine set : find loco+wagons and maybe railtype
+			local confirm = false;
+			local save_train_list = AIList();
+			local save_wagon_list = AIList();
+			local railtype_list = AIList();
+			local search_loco = -1;
+			local search_wagon = -1;
+			if (object.engine_roadtype == -1)	{
+												railtype_list.AddList(cEngineLib.RailType);
+												railtype_list.Sort(AIList.SORT_BY_VALUE, false);
+												}
+										else	railtype_list.AddItem(object.engine_roadtype,0);
+			save_train_list.AddList(train_list);
+			save_wagon_list.AddList(wagon_list);
+			foreach (RT, _ in railtype_list) // they are sort by first = best, last = poorest
+				{
+				oTrain.engine_roadtype = -1;
+				train_list.AddList(save_train_list); // else list of trains may be too short as a call will lower the list
+				search_loco = cEngineLib.GetCallbackResult(filter_callback, filter_callback_train);
+				if (search_loco != -1) // found the best train using that railtype
+					{
+					oWagon.engine_roadtype = RT;
+					oWagon.engine_id = search_loco;
+					wagon_list.AddList(save_wagon_list);
+					search_wagon = cEngineLib.GetCallbackResult(filter_callback, filter_callback_wagon);
+					if (search_wagon != 1) // found a good wagon to use with it
+						{
+						result.push(search_loco);
+						result.push(search_wagon);
+						result.push(RT);
+						return result;
+						}
+					}
+				} // foreach
+			return error;
+			}
+
+		// real results
+		if (object.engine_type != AIVehicle.VT_RAIL)
+			{ // the easy part first, non rail engines
+				local bestEngine = cEngineLib.GetCallbackResult(filter_callback, filter_callback_params);
+				if (cEngineLib.EngineIsKnown(bestEngine))	{ return [bestEngine]; } // Already tested no need to redo them
+				local confirm = false;
+				if (bestEngine == -1)	return error; // We cannot find any engine, filtered too hard or lack of engines
+				while (!confirm)
+						{
+						local vehID = cEngineLib.CreateVehicle(object.depot, bestEngine, object.cargo_id);
+						if (vehID == -1)	confirm = true;	 // maybe we run out of money, keep the current one
+									else	AIVehicle.SellVehicle(vehID); // discard the test vehicle
+						local another = cEngineLib.GetCallbackResult(filter_callback, filter_callback_params);
+						if (another == bestEngine)		confirm = true;
+												else	bestEngine = another;	
+						}
+				object.engine_id = bestEngine;
+				cEngineLib.CheckEngineObject(object);
+				result.push(bestEngine);
+				return result;
+				}
+		// the trains
+		if (object.engine_id != -1)
+				{ // apply a constrain, user want a fixed wagon engine or a loco
+				if (AIEngine.IsWagon(object.engine_id))	
+							{
+							wagon_list.Clear();
+							wagon_list.AddItem(object.engine_id,0);
+							if (wagon_list.IsEmpty())	return error;
+							oTrain.engine_id = object.engine_id;
+							}
+					else	{
+							train_list.Clear();
+							train_list.AddItem(object.engine_id,0);
+							if (train_list.IsEmpty())	return error;
+							oWagon.engine_id = object.engine_id;
+							}
+				}
+		local bestLoco = -1;
+		local bestWagon = -1;
+		local loco, wagon = null;
+		local altLoco = -1;
+		local altWagon = -1;
+		local train_end = false;
+		local train_exist = false;
+		local wagon_exist = false;
+		local wagon_end = false;
+		local giveup = false;
+		local is_error = false;
+		local need_looping = false;
+		local bad_wagon = false;
+		local save_train_list = AIList();
+		local save_wagon_list = AIList();
+		local train_tested = AIList();
+		save_train_list.AddList(train_list);
+		save_wagon_list.AddList(wagon_list);
+		while (!giveup)
+			{
+			train_list.AddList(save_train_list);
+			train_list.RemoveList(train_tested);
+			bestLoco = cEngineLib.GetCallbackResult(filter_callback, filter_callback_train);
+			if (bestLoco == -1)	is_error = true; // cannot find any train engine usable
+			if (!train_exist && !is_error)
+						{
+						loco = cEngineLib.CreateVehicle(object.depot, bestLoco, object.cargo_id);
+						train_exist = AIVehicle.IsValidVehicle(loco);
+						if (!train_exist)	is_error = true; // cannot be built, lack money...
+						}
+			if (!is_error)
+				{
+				wagon_list.AddList(save_wagon_list);
+				oWagon.engine_id = bestLoco;
+				bad_wagon =false;
+				bestWagon = cEngineLib.GetCallbackResult(filter_callback, filter_callback_wagon);
+				if (bestWagon == -1)
+						{ // no more wagons to try, changing loco
+						train_tested.AddItem(bestLoco, 0);
+						train_exist = false;
+						AIVehicle.SellVehicle(loco);
+						}
+				else	{
+						if (!cEngineLib.IsCoupleTested(bestLoco, bestWagon))
+								{
+								is_error = !cEngineLib.WagonCompatibilityTest(object.depot, loco, bestWagon, object.cargo_id);
+								}
+						else	{ giveup = true; } // no need to continue, we got the couple
+						}
+					}
+			if (is_error) giveup = true;
+			} // while (!giveup)
+		if (train_exist)	AIVehicle.SellVehicle(loco);
+		if (wagon_exist)	AIVehicle.SellVehicle(wagon);
+		if (is_error)	result.push(-1);
+				else	{
+						result.push(bestLoco);
+						result.push(bestWagon);
+						result.push(object.engine_roadtype);
+						}
+		return result;
+	}
+
+	function cEngineLib::EngineFilter(engine_list, cargo_id, road_type, engine_id, bypass)
+	// Change an AIList of engines to filter out ones that cannot match engine_id, or run on road_type road/rail or that aren't buildable
+	{
+		if (engine_list instanceof AIList && !engine_list.IsEmpty())
+				{
+				engine_list.Valuate(AIEngine.IsBuildable);
+				engine_list.KeepValue(1);
+				if (engine_list.IsEmpty())	return; // a dumb list without valid engine
+				local engine_type = AIEngine.GetVehicleType(engine_list.Begin());
+				if (engine_id != -1 && (!AIEngine.IsValidEngine(engine_id) || engine_type != AIVehicle.VT_RAIL))	engine_id = -1;
+				engine_list.Valuate(cEngineLib.IsEngineBlacklist);
+				engine_list.KeepValue(0);
+				if (road_type != -1 && (engine_type == AIVehicle.VT_RAIL || engine_type == AIVehicle.VT_ROAD))
+					{ // apply filter if we need a special road type
+					if (engine_type == AIVehicle.VT_RAIL)
+							{
+							engine_list.Valuate(AIEngine.CanRunOnRail, road_type);
+							engine_list.KeepValue(1);
+							}
+					else	{ // a road engine
+							engine_list.Valuate(AIEngine.GetRoadType);
+							engine_list.KeepValue(road_type);
+							}
+					}
+				if (engine_id != -1)
+					{ // apply a filter base on the engine
+					engine_list.Valuate(cEngineLib.AreEngineCompatible, engine_id);
+					engine_list.KeepValue(1);
+					engine_list.Valuate(AIEngine.IsWagon);
+					engine_list.KeepValue(AIEngine.IsWagon(engine_id) ? 0 : 1); // kick wagon or loco
+					}
+				if (cargo_id != -1)
+					{ // apply a filter per cargo type
+					if (engine_type == AIVehicle.VT_RAIL)
+								{ // filter train or wagon base on cargo
+								if (!AIEngine.IsWagon(engine_list.Begin()))	engine_list.Valuate(cEngineLib.CanPullCargo, cargo_id, bypass);
+																	else	engine_list.Valuate(AIEngine.CanRefitCargo, cargo_id);
+								engine_list.KeepValue(1);
+								}
+					if (engine_type != AIVehicle.VT_RAIL)	{ engine_list.Valuate(AIEngine.CanRefitCargo, cargo_id); engine_list.KeepValue(1); }
+					}
+				}
+	}
+
+	function cEngineLib::CreateVehicle(depot, engine_id, cargo_id = -1)
+	{
+		if (!AIEngine.IsValidEngine(engine_id))	return -1;
+		if (!cEngineLib.IsDepotTile(depot))	return -1;
+		local vehID = AIVehicle.BuildVehicle(depot, engine_id);
+		if (!AIVehicle.IsValidVehicle(vehID))	return -1;
+		cEngineLib.UpdateEngineProperties(vehID);
+		if (cargo_id == -1)	return vehID;
+		if (!AICargo.IsValidCargo(cargo_id) || !AIEngine.CanRefitCargo(engine_id, cargo_id))	return vehID;
+		if (!AIVehicle.RefitVehicle(vehID, cargo_id))	{ AIVehicle.SellVehicle(vehID); return -1; }
+		return vehID;
+	}
+
 	function cEngineLib::GetLength(engine_id, cargo_id = -1)
 	{
 		local eng = cEngineLib.Load(e_id);
 		if (eng == null)	return 0;
 		if (cargo_id == -1)	cargo_id = AIEngine.GetCargoType(engine_id);
 		return eng.cargo_length.GetValue(cargo_id);
-	}
-
-	function cEngineLib::IsLocomotive(engine_id)
-	{
-		if (!AIEngine.IsValidEngine(engine_id))	return false;
-		return (AIEngine.GetVehicleType(engine_id) == AIVehicle.VT_RAIL && !AIEngine.IsWagon(engine_id));
 	}
 
 	function cEngineLib::GetCapacity(engine_id, cargo_id = -1)
@@ -231,23 +533,32 @@ class cEngineLib extends AIEngine
 		return engObj.cargo_capacity.GetValue(cargo_id);
 	}
 
+	function cEngineLib::IsLocomotive(engine_id)
+	{
+		if (!AIEngine.IsValidEngine(engine_id))	return false;
+		return (AIEngine.GetVehicleType(engine_id) == AIVehicle.VT_RAIL && !AIEngine.IsWagon(engine_id));
+	}
+
 	function cEngineLib::IncompatibleEngine(engine_one, engine_two)
 	{
-		local eng1 = cEngineLib.Load(engine_one);
-		if (eng1 == null)	return;
-		local eng2 = cEngineLib.Load(engine_two);
-		if (eng2 == null)	return;
 		if (AIEngine.GetVehicleType(engine_one) != AIVehicle.VT_RAIL)	return;
 		if (AIEngine.GetVehicleType(engine_two) != AIVehicle.VT_RAIL)	return;
-		eng1.incompatible.AddItem(engine_one, engine_two);
-		eng2.incompatible.AddItem(engine_two, engine_one);
+		cEngineLib.SetUsuability(engine_one, engine_two, -1);
+	}
+
+	function cEngineLib::CompatibleEngine(engine_one, engine_two)
+	{
+		if (AIEngine.GetVehicleType(engine_one) != AIVehicle.VT_RAIL)	return;
+		if (AIEngine.GetVehicleType(engine_two) != AIVehicle.VT_RAIL)	return;
+		cEngineLib.SetUsuability(engine_one, engine_two, 1);
 	}
 
 	function cEngineLib::AreEngineCompatible(engine, compare_engine)
 	{
 		local eng = cEngineLib.Load(compare_engine);
 		if (eng == null)	return false;
-		return !(eng.incompatible.HasItem(engine));
+		if (!eng.usuability.HasItem(engine))	return true;
+		return (eng.usuability.GetValue(engine) == 1);
 	}
 
 	function cEngineLib::GetPrice(engine_id, cargo_id = -1)
@@ -283,16 +594,6 @@ class cEngineLib extends AIEngine
 		return (!wagonlist.IsEmpty());
 	}
 
-	function cEngineLib::EngineCacheInit()
-		{
-		local cache = [AIVehicle.VT_ROAD, AIVehicle.VT_AIR, AIVehicle.VT_RAIL, AIVehicle.VT_WATER];
-		foreach (item in cache)
-			{
-			local engList = AIEngineList(item);
-			foreach (engID, _ in engList)	local dum = cEngineLib.Load(engID);
-			}
-		}
-
 	function cEngineLib::IsEngineBlacklist(engine_id)
 	{
 		return (cEngineLib.EngineBL.HasItem(engine_id));
@@ -310,208 +611,106 @@ class cEngineLib extends AIEngine
 		return (AIRoad.IsRoadDepotTile(tile) || AIAirport.IsHangarTile(tile) || AIRail.IsRailDepotTile(tile) || AIMarine.IsWaterDepotTile(tile));
 	}
 
-	function cEngineLib::EngineFilter(engine_list, cargo_id, road_type, engine_id, bypass)
-	// Change an AIList of engines to filter out ones that cannot match engine_id, or run on road_type road/rail or that aren't buildable
-	{
-		if (engine_list instanceof AIList && !engine_list.IsEmpty())
-				{
-				engine_list.Valuate(AIEngine.IsBuildable);
-				engine_list.KeepValue(1);
-				if (engine_list.IsEmpty())	return; // a dumb list without valid engine
-				local engine_type = AIEngine.GetVehicleType(engine_list.Begin());
-				if (engine_id != -1 && (!AIEngine.IsValidEngine(engine_id) || engine_type != AIVehicle.VT_RAIL))	engine_id = -1;
-				engine_list.Valuate(cEngineLib.IsEngineBlacklist);
-				engine_list.KeepValue(0);
-				if (road_type != -1 && (engine_type == AIVehicle.VT_RAIL || engine_type == AIVehicle.VT_ROAD))
-					{ // apply filter if we need a special road type
-					if (engine_type == AIVehicle.VT_RAIL)
-							{
-							engine_list.Valuate(AIEngine.CanRunOnRail, road_type);
-							engine_list.KeepValue(1);
-							}
-					else	{ // a road engine
-							engine_list.Valuate(AIEngine.GetRoadType);
-							engine_list.KeepValue(road_type);
-							}
-					}
-				if (engine_id != -1)
-					{ // apply a filter base on the engine
-					engine_list.Valuate(cEngineLib.AreEngineCompatible, engine_id);
-					engine_list.KeepValue(1);
-					}
-				if (cargo_id != -1)
-					{ // apply a filter per cargo type
-					if (engine_id != -1)
-								{ // filter train or wagon base on cargo
-								engine_list.Valuate(AIEngine.IsWagon);
-								engine_list.KeepValue(AIEngine.IsWagon(engine_id) ? 0 : 1); // kick wagon or loco
-								if (AIEngine.IsWagon(engine_id))	engine_list.Valuate(cEngineLib.CanPullCargo, cargo_id, bypass);
-															else	engine_list.Valuate(AIEngine.CanRefitCargo, cargo_id);
-								engine_list.KeepValue(1);
-								}
-						else	{ engine_list.Valuate(AIEngine.CanRefitCargo, cargo_id); engine_list.KeepValue(1); }
-					}
-				}
-	}
-
-	function cEngineLib::CreateVehicle(depot, engine_id, cargo_id = -1)
-	{
-		if (!AIEngine.IsValidEngine(engine_id))	return -1;
-		if (!cEngineLib.IsDepotTile(depot))	return -1;
-		local vehID = AIVehicle.BuildVehicle(depot, engine_id);
-		if (!AIVehicle.IsValidVehicle(vehID))	return -1;
-		cEngineLib.UpdateEngineProperties(vehID);
-		if (cargo_id == -1)	return vehID;
-		if (!AICargo.IsValidCargo(cargo_id) || !AIEngine.CanRefitCargo(engine_id, cargo_id))	return vehID;
-		if (!AIVehicle.RefitVehicle(vehID, cargo_id))	{ AIVehicle.SellVehicle(vehID); return -1; }
-		return vehID;
-	}
-
-	function cEngineLib::GetBestEngine(object, filter)
-	{
-		local isobject = object instanceof cEngineLib.Infos;
-		local error = []; error.push(-1);
-		if (!isobject)	{ AILog.Error("object must be a cEngineLib.Infos instance"); return error; }
-		cEngineLib.CheckEngineObject(object);
-		if (object.cargo_id == -1)	{ AILog.Error("cargo_id must be a valid cargo"); return error; }
-		if (object.depot == -1 && object.engine_type == -1)	{ AILog.Error("object.engine_type must be set when the depot doesn't exist"); return error; }
-		local all_engineList = AIEngineList(object.engine_type);
-		local filter_callback = cEngineLib.Filter_EngineGeneric;
-		local filter_callback_params = [];
-		if (object.engine_type == AIVehicle.VT_RAIL)	filter_callback = cEngineLib.Filter_EngineTrain;
-		filter_callback_params.push(all_engineList);
-		filter_callback_params.push(object);
-		if (filter != null)
-					{
-					if (typeof(filter) != "function")	{ AILog.Error("filter must be a function"); return error; }
-					filter_callback = filter;
-					}
-		local result = [];
-		if (object.depot == -1) // theorical results
+	function cEngineLib::EngineCacheInit()
+		{
+		local cache = [AIVehicle.VT_ROAD, AIVehicle.VT_AIR, AIVehicle.VT_RAIL, AIVehicle.VT_WATER];
+		foreach (item in cache)
 			{
-			if (object.engine_type != AIVehicle.VT_RAIL)
-				{
-				result.push(cEngineLib.GetCallbackResult(filter_callback, filter_callback_params));
-				return result;
-				}
-			if (object.engine_id != -1)
+			local engList = AIEngineList(item);
+			foreach (engID, _ in engList)	local dum = cEngineLib.Load(engID);
+			}
+		}
+
+	function cEngineLib::GetBestRailType(engineID = -1)
+	{
+		if (cEngineLib.RailType.IsEmpty())	return -1;
+		cEngineLib.RailType.Sort(AIList.SORT_BY_VALUE, true);
+		if (engineID == -1)	return cEngineLib.RailType.Begin();
+		local train = cEngine.IsLocomotive(engineID);
+		local top_rt = -1;
+		local best_rt = -1;
+		foreach (rt, spd in cEngineLib.RailType)
+			{
+			local res = -1;
+			if (train)	res = AIEngine.HasPowerOnRail(engineID, rt);
+				else	res = AIEngine.CanRunOnRail(engineID, rt);
+			if (res && top_rt < spd)	{ top_rt = spd; best_rt = rt; }
+			}
+		return best_rt;
+	}
+
+	function cEngineLib::GetTrainMaximumSpeed()
+	{
+		if (cEngineLib.RailType.IsEmpty())	return -1;
+		cEngineLib.RailType.Sort(AIList.SORT_BY_VALUE, true);
+		return cEngineLib.RailType.GetValue(cEngineLib.RailType.Begin());
+	}
+
+	function SetAPIErrorHandling(output)
+	{
+		if (typeof(output) != "bool")	return;
+		cEngineLib.APIConfig[0] = output;
+	}
+
+	function GetAPIError()
+	{
+		return cEngineLib.APIConfig[1];
+	}
+
+	   // ****************** //
+	  // PRIVATE FUNCTIONS  //
+	 // ****************** //
+
+	function cEngineLib::ErrorReport(error)
+	// if allowed print the error. Also set last error string
+	{
+		cEngineLib.APIConfig[1] = "cEngineLib: "+error;
+		if (cEngineLib.APIConfig[0])	AILog.Error(cEngineLib.APIConfig[1]);
+	}
+
+	function cEngineLib::SetUsuability(engine_one, engine_two, flags)
+	// set the usuability flags off two engines
+	{
+		if (engine_one == null || engine_two == null)	return;
+		if (AIEngine.GetVehicleType(engine_one) != AIVehicle.VT_RAIL)	return;
+		if (AIEngine.GetVehicleType(engine_two) != AIVehicle.VT_RAIL)	return;
+		local eng1 = cEngineLib.Load(engine_one);
+		if (eng1 == null)	return;
+		local eng2 = cEngineLib.Load(engine_two);
+		if (eng2 == null)	return;
+		if (AIEngine.GetVehicleType(engine_one) != AIVehicle.VT_RAIL)	return;
+		if (AIEngine.GetVehicleType(engine_two) != AIVehicle.VT_RAIL)	return;
+		if (!eng1.usuability.HasItem(engine_two))	eng1.usuability.AddItem(engine_two, 0);
+		if (!eng2.usuability.HasItem(engine_one))	eng2.usuability.AddItem(engine_one, 0);
+		eng1.usuability.SetValue(engine_two, flags);
+		eng2.usuability.SetValue(engine_one, flags);
+	}
+
+	function cEngineLib::IsCoupleTested(engine_one, engine_two)
+	// return true if engine1 has been test with engine2
+	{
+		local eng = cEngineLib.Load(engine_one);
+		if (eng == null)	return false;
+		return eng.usuability.HasItem(engine_two);
+	}
+
+	function cEngineLib::SetRailTypeSpeed(engineID)
+	// We set the maximum speed a train can reach on that railtype
+	{
+		local rlist = AIRailTypeList();
+		rlist.Valuate(AIRail.GetMaxSpeed);
+		local engine_speed = AIEngine.GetMaxSpeed(engineID);
+		foreach (rt, rt_speed in rlist)
+			{
+			if (!cEngineLib.RailType.HasItem(rt))	cEngineLib.RailType.AddItem(rt, 0);
+			if (AIEngine.HasPowerOnRail(engineID, rt))
 					{
-					local back = cEngineLib.GetCallbackResult(filter_callback, filter_callback_params);
-					if (AIEngine.IsWagon(engine_id))	{ result.push(back); result.push(engine_id); }
-												else	{ result.push(engine_id); result.push(back); }
-					return result;
+					if (rt_speed == 0)	rt_speed = engine_speed;
+								else	if (rt_speed > engine_speed)	rt_speed = engine_speed;
+					if (cEngineLib.RailType.GetValue(rt) < rt_speed)	{ cEngineLib.RailType.SetValue(rt, rt_speed); }
 					}
 			}
-
-		// real results
-		if (object.engine_type != AIVehicle.VT_RAIL)
-			{ // the easy part first
-				local bestEngine = cEngineLib.GetCallbackResult(filter_callback, filter_callback_params);
-				if (cEngineLib.EngineIsKnown(bestEngine))	{ return [bestEngine]; } // Already tested no need to redo them
-				local confirm = false;
-				if (bestEngine == -1)	return error; // We cannot find any engine, filtered too hard or lack of engines
-				while (!confirm)
-						{
-						local vehID = cEngineLib.CreateVehicle(object.depot, bestEngine, object.cargo_id);
-						if (vehID == -1)	confirm = true;	 // maybe we run out of money, keep the current one
-									else	AIVehicle.SellVehicle(vehID); // discard the test vehicle
-						local another = cEngineLib.GetCallbackResult(filter_callback, filter_callback_params);
-						if (another == bestEngine)		confirm = true;
-												else	bestEngine = another;	
-						}
-				object.engine_id = bestEngine;
-				cEngineLib.CheckEngineObject(object);
-				result.push(bestEngine);
-				return result;
-				}
-		// now trains
-		local oTrain = cEngineLib.Infos();
-		local oWagon = cEngineLib.Infos();
-		oWagon.depot = object.depot;
-		oWagon.cargo_id = object.cargo_id;
-		oWagon.bypass = object.bypass;
-		cEngineLib.CheckEngineObject(oWagon);
-		oTrain.depot = object.depot;
-		oTrain.cargo_id = object.cargo_id;
-		oTrain.bypass = object.bypass;
-		cEngineLib.CheckEngineObject(oTrain);
-		local train_list = AIEngineList(object.engine_type);
-		local wagon_list = AIEngineList(object.engine_type);
-		local filter_callback_train = [];
-		filter_callback_train.extend(filter_callback_params);
-		local filter_callback_wagon = [];
-		filter_callback_wagon.extend(filter_callback_params);
-		filter_callback_train[0] = train_list;
-		filter_callback_train[1] = oTrain;
-		filter_callback_wagon[0] = wagon_list;
-		filter_callback_wagon[1] = oWagon;
-		wagon_list.Valuate(AIEngine.IsWagon);
-		train_list.Valuate(AIEngine.IsWagon);
-		wagon_list.KeepValue(1);
-		train_list.KeepValue(0)
-		if (object.engine_id != -1)
-				{ // apply a constrain, user want a fixed wagon engine or a loco
-				if (AIEngine.IsWagon(object.engine_id))	
-							{
-							wagon_list.Clear();
-							wagon_list.AddItem(object.engine_id,0);
-							if (wagon_list.IsEmpty())	return error;
-							oTrain.engine_id = object.engine_id;
-							}
-					else	{
-							train_list.Clear();
-							train_list.AddItem(object.engine_id,0);
-							if (train_list.IsEmpty())	return error;
-							oWagon.engine_id = object.engine_id;
-							}
-				}
-		local bestLoco = cEngineLib.GetCallbackResult(filter_callback, filter_callback_train);
-		local bestWagon = cEngineLib.GetCallbackResult(filter_callback, filter_callback_wagon);
-		local loco, wagon = null;
-		local altLoco = -1;
-		local altWagon = -1;
-		local train_end = false;
-		local train_exist = false;
-		local wagon_exist = false;
-		local wagon_end = false;
-		while (!train_end && !wagon_end)
-			{
-			if (!train_exist)	loco = cEngineLib.CreateVehicle(object.depot, bestLoco, object.cargo_id);
-			train_exist = AIVehicle.IsValidVehicle(loco);
-			if (!wagon_exist)	wagon = cEngineLib.CreateVehicle(object.depot, bestWagon, object.cargo_id);
-			wagon_exist = AIVehicle.IsValidVehicle(wagon);
-			if (train_exist && wagon_exist)
-				{ // let's attach them
-				local attach_try = AITestMode();
-				local atest = AIVehicle.MoveWagon(wagon, 0, loco, AIVehicle.GetNumWagons(loco) -1);
-				attach_try = null;
-				if (!atest)	cEngineLib.Incompatible(loco, wagon);
-				}
-			altLoco = cEngineLib.GetCallbackResult(filter_callback, filter_callback_train);
-			altWagon = cEngineLib.GetCallbackResult(filter_callback, filter_callback_wagon);
-			if (altLoco == bestLoco)	train_end = true;
-								else	{
-										if (train_exist)	AIVehicle.SellVehicle(loco);
-										train_exist = false;
-										bestLoco = altLoco;
-										}
-			if (altWagon == bestWagon)	wagon_end = true;
-								else	{
-										if (wagon_exist)	AIVehicle.SellVehicle(wagon);
-										wagon_exist = false;
-										bestWagon = altWagon;
-										}
-			}
-		if (train_exist)	AIVehicle.SellVehicle(loco);
-		if (wagon_exist)	AIVehicle.SellVehicle(wagon);
-		result.push(bestLoco);
-		result.push(bestWagon);
-		return result;
 	}
-
-	// *********************** //
-	// PRIVATE FUNCTIONS - API //
-	// *********************** //
 
 	function cEngineLib::Load(e_id)
 	{
@@ -532,7 +731,7 @@ class cEngineLib extends AIEngine
 			{
 			this.cargo_length.AddItem(crg, 8); // default to 8, a classic length
 			this.cargo_price.AddItem(crg, -1);
-			// 2 reasons: make the engine appears cheap vs an already test one & allow us to know if we met it already (see UpdateEngineProperties)
+			// 2 reasons: make the engine appears cheaper vs an already test one & allow us to know if we met it already (see UpdateEngineProperties)
 			if (AIEngine.CanRefitCargo(this.engine_id, crg))	this.cargo_capacity.AddItem(crg,255);
 														else	this.cargo_capacity.AddItem(crg,0);
 			// 255 so it will appears to be a bigger carrier vs an already test engine
@@ -541,7 +740,7 @@ class cEngineLib extends AIEngine
 		local crgtype = AIEngine.GetCargoType(this.engine_id);
 		this.cargo_capacity.SetValue(crgtype, AIEngine.GetCapacity(this.engine_id));
 		cEngineLib.enginedatabase[this.engine_id] <- this;
-print("Adding engine "+AIEngine.GetName(this.engine_id)+" to base");
+		if (AIEngine.GetVehicleType(this.engine_id) == AIVehicle.VT_RAIL && !AIEngine.IsWagon(this.engine_id))	cEngineLib.SetRailTypeSpeed(this.engine_id);
 		return true;
 	}
 
@@ -609,6 +808,36 @@ print("Adding engine "+AIEngine.GetName(this.engine_id)+" to base");
 		if (eo.engine_id != -1)	eo.engine_type = AIVehicle.VT_RAIL; // no need to test
 		if (eo.engine_type != AIVehicle.VT_RAIL)	eo.engine_id = -1;
 	}
+
+	function cEngineLib::WagonCompatibilityTest(depot, vehicleID, wagonID, cargoID)
+	// Test creating wagonID engine for cargoID and attach it to vehicleID vehicle using depot
+	// return true if we test it, return false if we cannot manage to do the test (lack money...)
+	{
+		local wagon = null;
+		local goodresult = true;
+		local locotype = AIVehicle.GetEngineType(vehicleID);
+		wagon = cEngineLib.CreateVehicle(depot, wagonID, cargoID);
+		if (!AIVehicle.IsValidVehicle(wagon))
+								{
+								local error = AIError.GetLastError();
+								local errorcat = AIError.GetErrorCategory();
+								if (error == AIError.ERR_UNKNOWN)
+										{ // 2cc produce that error on failure with a wagon, well, no other reason given
+										cEngineLib.IncompatibleEngine(locotype, wagonID);
+										}
+								else	goodresult = false;
+								}
+						else	{
+								local attach_try = AITestMode();
+								local atest = AIVehicle.MoveWagon(wagon, 0, vehicleID, AIVehicle.GetNumWagons(vehicleID) -1);
+								attach_try = null;
+								if (!atest)	cEngineLib.IncompatibleEngine(locotype, wagonID);
+									else	cEngineLib.CompatibleEngine(locotype, wagonID);
+								AIVehicle.SellVehicle(wagon);
+								}
+	return goodresult;
+	}
+
 
 class	cEngineLib.Infos
 {
