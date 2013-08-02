@@ -118,6 +118,27 @@ class cEngineLib extends AIEngine
 	 * @return True if it's a locomotive, false if not or invalid...
 	 */
 
+	function GetNumberOfLocomotive(vehicle_id) {}
+	/**
+	 * Get the number of locomotive a vehicle have
+	 * @param vehicle_id the vehicle to check, must be a rail vehicle
+	 * @return 0 if no locomotive/not a train, or the number of locomotive in the vehicle
+	 */
+
+	function GetNumberOfWagons(vehicle_id) {}
+	/**
+	 * Get the number of wagons a vehicle have
+	 * @param vehicle_id the vehicle to check, must be a rail vehicle
+	 * @return 0 if not a train or without wagon, or the number of wagons in the vehicle
+	 */
+
+	function GetWagonFromVehicle(vehicle_id) {}
+	/**
+	 * Get the position of any wagon in the train
+	 * @param vehicle_id the vehicle to check, must be a rail vehicle
+	 * @return -1 if not a train or no wagon. A place (position) with a wagon in the train
+	 */
+
 	function IncompatibleEngine(engine_one, engine_two) {}
 	/**
 	 * Mark engine_one and engine_two not compatible with each other
@@ -140,6 +161,14 @@ class cEngineLib extends AIEngine
 	 * @param engine_one engine id of the first engine
 	 * @param engine_two engine id of the second engine
 	 * @return true if you can use them, if we never check their compatibilities, it will return true
+	 */
+
+	function WagonCompatibilityTest(vehicleID, wagonID, cargoID) {}
+	/**
+	 * Test compatibilty of a wagon engine with the vehicle. For rails vehicle only. This autofill compatibilty state of both engines.
+	 * @param vehicleID a valid vehicle, stopped in a depot, with a locomotive in it
+	 * @param wagonID  the engine wagon type to test.
+	 * @return true if test succeed, false if test fail for some reason.
 	 */
 
 	function GetPrice(engine_id, cargo_id = -1)	{}
@@ -317,7 +346,7 @@ class cEngineLib extends AIEngine
 							oWagon.engine_id = object.engine_id;
 							oWagon.engine_roadtype = cEngineLib.GetBestRailType(object.engine_id);
 							back = cEngineLib.GetCallbackResult(filter_callback, filter_callback_wagon);
-							if (back != -1)	{ result.push(object.engine_id); result.push(back); result.push(oWagon.engine_routetype); return result; }
+							if (back != -1)	{ result.push(object.engine_id); result.push(back); result.push(oWagon.engine_roadtype); return result; }
 									else	return error;
 							}
 					}
@@ -441,7 +470,7 @@ class cEngineLib extends AIEngine
 				else	{
 						if (!cEngineLib.IsCoupleTested(bestLoco, bestWagon))
 								{
-								is_error = !cEngineLib.WagonCompatibilityTest(object.depot, loco, bestWagon, object.cargo_id);
+								is_error = !cEngineLib.WagonCompatibilityTest(loco, bestWagon, object.cargo_id);
 								}
 						else	{ giveup = true; } // no need to continue, we got the couple
 						}
@@ -539,6 +568,32 @@ class cEngineLib extends AIEngine
 		return (AIEngine.GetVehicleType(engine_id) == AIVehicle.VT_RAIL && !AIEngine.IsWagon(engine_id));
 	}
 
+	function cEngineLib::GetNumberOfLocomotive(vehicle_id)
+	{
+		if (AIVehicle.GetVehicleType(vehicle_id) != AIVehicle.VT_RAIL)	return 0;
+		local numwagon = cEngineLib.GetNumberOfWagons(vehicle_id);
+		local totalpart = AIVehicle.GetNumWagons(vehicle_id);
+		return (totalpart - numwagon);
+	}
+
+	function cEngineLib::GetNumberOfWagons(vehicle_id)
+	{
+		if (AIVehicle.GetVehicleType(vehicle_id) != AIVehicle.VT_RAIL)	return 0;
+		local numwagon = 0;
+		local numpart = AIVehicle.GetNumWagons(vehicle_id);
+		for (local i = 0; i < numpart; i++)	if (AIEngine.IsWagon(AIVehicle.GetWagonEngineType(vehicle_id, i)))	numwagon++;
+		return numwagon;	
+	}
+
+	function cEngineLib::GetWagonFromVehicle(vehicle_id)
+	{
+		if (AIVehicle.GetVehicleType(vehicle_id) != AIVehicle.VT_RAIL)	return -1;
+		local size = AIVehicle.GetNumWagons(vehicle_id);
+		for (local i = 0; i < size; i++)
+				if (AIEngine.IsWagon(AIVehicle.GetWagonEngineType(vehicle_id, i)))	return i;
+		return -1;
+	}
+
 	function cEngineLib::IncompatibleEngine(engine_one, engine_two)
 	{
 		if (AIEngine.GetVehicleType(engine_one) != AIVehicle.VT_RAIL)	return;
@@ -559,6 +614,43 @@ class cEngineLib extends AIEngine
 		if (eng == null)	return false;
 		if (!eng.usuability.HasItem(engine))	return true;
 		return (eng.usuability.GetValue(engine) == 1);
+	}
+
+	function cEngineLib::WagonCompatibilityTest(vehicleID, wagonID, cargoID)
+	// return true if we test it, return false if we cannot manage to do the test (lack money...)
+	{
+		if (!AIVehicle.IsValidVehicle(vehicleID) || !AIVehicle.GetVehicleType(vehicleID) != AIVehicle.VT_RAIL)	return false;
+		if (!AIEngine.IsBuilable(wagonID) || !AIEngine.GetVehicleType(wagonID) != AIVehicle.VT_RAIL)	return false;
+		if (!AICargo.IsValidCargo(cargoID))	return false;
+		if (AIVehicle.GetState(vehicleID) != AIVehicle.VS_IN_DEPOT)	return false;
+		local depot = AIVehicle.GetLocation(vehicleID);
+		local wagon = null;
+		local goodresult = true;
+		local locotype = AIVehicle.GetEngineType(vehicleID);
+		wagon = cEngineLib.CreateVehicle(depot, wagonID, cargoID);
+		if (!AIVehicle.IsValidVehicle(wagon))
+								{
+								local error = AIError.GetLastError();
+								local errorcat = AIError.GetErrorCategory();
+								if (error == AIError.ERR_UNKNOWN)
+										{ // 2cc produce that error on failure with a wagon, well, no other reason given
+										cEngineLib.IncompatibleEngine(locotype, wagonID);
+										}
+								else	goodresult = false;
+								}
+						else	{
+								local attach_try = AITestMode();
+								local atest = AIVehicle.MoveWagon(wagon, 0, vehicleID, AIVehicle.GetNumWagons(vehicleID) -1);
+								attach_try = null;
+								if (!atest)
+										{
+										if (AIError.GetLastError() == AIVehicle.ERR_VEHICLE_TOO_LONG)	goodresult = false;
+																								else	cEngineLib.IncompatibleEngine(locotype, wagonID);
+										}
+								else	cEngineLib.CompatibleEngine(locotype, wagonID);
+								AIVehicle.SellVehicle(wagon);
+								}
+	return goodresult;
 	}
 
 	function cEngineLib::GetPrice(engine_id, cargo_id = -1)
@@ -809,34 +901,6 @@ class cEngineLib extends AIEngine
 		if (eo.engine_type != AIVehicle.VT_RAIL)	eo.engine_id = -1;
 	}
 
-	function cEngineLib::WagonCompatibilityTest(depot, vehicleID, wagonID, cargoID)
-	// Test creating wagonID engine for cargoID and attach it to vehicleID vehicle using depot
-	// return true if we test it, return false if we cannot manage to do the test (lack money...)
-	{
-		local wagon = null;
-		local goodresult = true;
-		local locotype = AIVehicle.GetEngineType(vehicleID);
-		wagon = cEngineLib.CreateVehicle(depot, wagonID, cargoID);
-		if (!AIVehicle.IsValidVehicle(wagon))
-								{
-								local error = AIError.GetLastError();
-								local errorcat = AIError.GetErrorCategory();
-								if (error == AIError.ERR_UNKNOWN)
-										{ // 2cc produce that error on failure with a wagon, well, no other reason given
-										cEngineLib.IncompatibleEngine(locotype, wagonID);
-										}
-								else	goodresult = false;
-								}
-						else	{
-								local attach_try = AITestMode();
-								local atest = AIVehicle.MoveWagon(wagon, 0, vehicleID, AIVehicle.GetNumWagons(vehicleID) -1);
-								attach_try = null;
-								if (!atest)	cEngineLib.IncompatibleEngine(locotype, wagonID);
-									else	cEngineLib.CompatibleEngine(locotype, wagonID);
-								AIVehicle.SellVehicle(wagon);
-								}
-	return goodresult;
-	}
 
 
 class	cEngineLib.Infos
