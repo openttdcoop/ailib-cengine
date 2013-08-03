@@ -340,14 +340,14 @@ class cEngineLib extends AIEngine
 							oTrain.engine_routetype = cEngineLib.GetBestRailType(object.engine_id);
 							back = cEngineLib.GetCallbackResult(filter_callback, filter_callback_train);
 							if (back != -1)	{ result.push(back); result.push(object.engine_id); result.push(oTrain.engine_routetype); return result; }
-									else	return error;
+									else	{ cEngineLib.ErrorReport("No train that can pull that wagon : #"+object.engine_id+" - "+AIEngine.GetName(object.engine_id)); return error; }
 							}
 					else	{ // find a wagon for that train
 							oWagon.engine_id = object.engine_id;
 							oWagon.engine_roadtype = cEngineLib.GetBestRailType(object.engine_id);
 							back = cEngineLib.GetCallbackResult(filter_callback, filter_callback_wagon);
 							if (back != -1)	{ result.push(object.engine_id); result.push(back); result.push(oWagon.engine_roadtype); return result; }
-									else	return error;
+									else	{ cEngineLib.ErrorReport("No wagon that we could use with that train : #"+object.engine_id+" - "+AIEngine.GetName(object.engine_id)); return error; }
 							}
 					}
 			// theory, train, no engine set : find loco+wagons and maybe railtype
@@ -384,6 +384,7 @@ class cEngineLib extends AIEngine
 						}
 					}
 				} // foreach
+			cEngineLib.ErrorReport("Coudn't find a matching train and wagon to use");
 			return error;
 			}
 
@@ -393,7 +394,7 @@ class cEngineLib extends AIEngine
 				local bestEngine = cEngineLib.GetCallbackResult(filter_callback, filter_callback_params);
 				if (cEngineLib.EngineIsKnown(bestEngine))	{ return [bestEngine]; } // Already tested no need to redo them
 				local confirm = false;
-				if (bestEngine == -1)	return error; // We cannot find any engine, filtered too hard or lack of engines
+				if (bestEngine == -1)	{ cEngineLib.ErrorReport("Couldn't find any engine: filter too hard, lack of engine avaiable..."); return error; }
 				while (!confirm)
 						{
 						local vehID = cEngineLib.CreateVehicle(object.depot, bestEngine, object.cargo_id);
@@ -415,13 +416,13 @@ class cEngineLib extends AIEngine
 							{
 							wagon_list.Clear();
 							wagon_list.AddItem(object.engine_id,0);
-							if (wagon_list.IsEmpty())	return error;
+							if (wagon_list.IsEmpty())	{ cEngineLib.ErrorReport("No train that can pull that wagon : #"+object.engine_id+" - "+AIEngine.GetName(object.engine_id)); return error; }
 							oTrain.engine_id = object.engine_id;
 							}
 					else	{
 							train_list.Clear();
 							train_list.AddItem(object.engine_id,0);
-							if (train_list.IsEmpty())	return error;
+							if (train_list.IsEmpty())	{ cEngineLib.ErrorReport("No wagon that we could use with that train : #"+object.engine_id+" - "+AIEngine.GetName(object.engine_id)); return error; }
 							oWagon.engine_id = object.engine_id;
 							}
 				}
@@ -448,12 +449,12 @@ class cEngineLib extends AIEngine
 			train_list.AddList(save_train_list);
 			train_list.RemoveList(train_tested);
 			bestLoco = cEngineLib.GetCallbackResult(filter_callback, filter_callback_train);
-			if (bestLoco == -1)	is_error = true; // cannot find any train engine usable
+			if (bestLoco == -1)	{ cEngineLib.ErrorReport("Cannot find any train engine usable"); is_error = true; } // cannot find any train engine usable
 			if (!train_exist && !is_error)
 						{
 						loco = cEngineLib.CreateVehicle(object.depot, bestLoco, object.cargo_id);
 						train_exist = AIVehicle.IsValidVehicle(loco);
-						if (!train_exist)	is_error = true; // cannot be built, lack money...
+						if (!train_exist)	{ cEngineLib.ErrorReport("Cannot create the train engine : #"+bestLoco+" - "+AIEngine.GetName(bestLoco)+" > "+AIError.GetLastErrorString()); is_error = true; } // cannot be built, lack money...
 						}
 			if (!is_error)
 				{
@@ -622,7 +623,7 @@ class cEngineLib extends AIEngine
 		if (!AIVehicle.IsValidVehicle(vehicleID) || AIVehicle.GetVehicleType(vehicleID) != AIVehicle.VT_RAIL)	{ cEngineLib.ErrorReport("vehicleID must be a valid rail vehicle"); return false; }
 		if (!AIEngine.IsBuildable(wagonID) || AIEngine.GetVehicleType(wagonID) != AIVehicle.VT_RAIL)	{ cEngineLib.ErrorReport("wagonID must be a valid buildable wagon engine"); return false; }
 		if (!AICargo.IsValidCargo(cargoID))	{ cEngineLib.ErrorReport("carogID must be a valid cargo"); return false; }
-		if (AIVehicle.GetState(vehicleID) != AIVehicle.VS_IN_DEPOT)	return false;
+		if (AIVehicle.GetState(vehicleID) != AIVehicle.VS_IN_DEPOT)	{ cEngineLib.ErrorReport("VehileID must be a vehicle stopped at a depot"); return false; }
 		local depot = AIVehicle.GetLocation(vehicleID);
 		local wagon = null;
 		local goodresult = true;
