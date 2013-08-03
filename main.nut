@@ -619,8 +619,8 @@ class cEngineLib extends AIEngine
 	function cEngineLib::WagonCompatibilityTest(vehicleID, wagonID, cargoID)
 	// return true if we test it, return false if we cannot manage to do the test (lack money...)
 	{
-		if (!AIVehicle.IsValidVehicle(vehicleID) || !AIVehicle.GetVehicleType(vehicleID) != AIVehicle.VT_RAIL)	return false;
-		if (!AIEngine.IsBuilable(wagonID) || !AIEngine.GetVehicleType(wagonID) != AIVehicle.VT_RAIL)	return false;
+		if (!AIVehicle.IsValidVehicle(vehicleID) || AIVehicle.GetVehicleType(vehicleID) != AIVehicle.VT_RAIL)	return false;
+		if (!AIEngine.IsBuildable(wagonID) || AIEngine.GetVehicleType(wagonID) != AIVehicle.VT_RAIL)	return false;
 		if (!AICargo.IsValidCargo(cargoID))	return false;
 		if (AIVehicle.GetState(vehicleID) != AIVehicle.VS_IN_DEPOT)	return false;
 		local depot = AIVehicle.GetLocation(vehicleID);
