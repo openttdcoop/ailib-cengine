@@ -24,7 +24,7 @@ class cEngineLib extends AILibrary
     function GetName()        { return "cEngineLib"; }
     function GetShortName()   { return "CENG"; }
     function GetDescription() { return "A library providing tools to handle engines"; }
-    function GetVersion()     { return 3; }
+    function GetVersion()     { return 4; }
     function GetAPIVersion()  { return "1.2"; }
     function GetDate()        { return "2013-07-23"; }
     function CreateInstance() { return "cEngineLib"; }

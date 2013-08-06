@@ -461,7 +461,15 @@ class cEngineLib extends AIEngine
 			train_list.AddList(save_train_list);
 			train_list.RemoveList(train_tested);
 			bestLoco = cEngineLib.GetCallbackResult(filter_callback, filter_callback_train);
-			if (bestLoco == -1)	{ cEngineLib.ErrorReport("Cannot find any train engine usable"); is_error = true; } // cannot find any train engine usable
+			if (bestLoco == -1)	{ // no more trains to try
+								cEngineLib.ErrorReport("Cannot find any train engine usable with "+cEngineLib.EngineToName(object.engine_id));
+								is_error = true;
+								}
+			if (train_exist && !is_error && AIVehicle.GetEngineType(loco) != bestLoco)
+						{ // the current built isn't the good one selected now
+						AIVehicle.SellVehicle(loco);
+						train_exist = false;
+						}
 			if (!train_exist && !is_error)
 						{
 						loco = cEngineLib.CreateVehicle(object.depot, bestLoco, object.cargo_id);
@@ -475,10 +483,9 @@ class cEngineLib extends AIEngine
 				bad_wagon =false;
 				bestWagon = cEngineLib.GetCallbackResult(filter_callback, filter_callback_wagon);
 				if (bestWagon == -1)
-						{ // no more wagons to try, changing loco
-						train_tested.AddItem(bestLoco, 0);
-						train_exist = false;
-						AIVehicle.SellVehicle(loco);
+						{ // no more wagons to try, give up.
+						cEngineLib.ErrorReport("Cannot find any wagon engine usable with "+cEngineLib.EngineToName(object.engine_id));
+						is_error = true;
 						}
 				else	{
 						if (!cEngineLib.IsCoupleTested(bestLoco, bestWagon))
@@ -783,8 +790,6 @@ class cEngineLib extends AIEngine
 		if (eng1 == null)	return;
 		local eng2 = cEngineLib.Load(engine_two);
 		if (eng2 == null)	return;
-		if (AIEngine.GetVehicleType(engine_one) != AIVehicle.VT_RAIL)	return;
-		if (AIEngine.GetVehicleType(engine_two) != AIVehicle.VT_RAIL)	return;
 		if (!eng1.usuability.HasItem(engine_two))	eng1.usuability.AddItem(engine_two, 0);
 		if (!eng2.usuability.HasItem(engine_one))	eng2.usuability.AddItem(engine_one, 0);
 		eng1.usuability.SetValue(engine_two, flags);
