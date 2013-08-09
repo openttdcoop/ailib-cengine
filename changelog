@@ -1,0 +1,18 @@
+v1: 
+Initial.
+
+v2: 
+- new functions : GetNumberOfLocomotive, GetNumberOfWagons, GetWagonFromVehicle, WagonCompatibilityTest
+- bugfixes
+
+v3:
+- Add more error messages return
+
+v4:
+- bugfixes
+
+v5:
+- new functions : RestrictLength_Vehicle, RestrictLength_Wagons, IsMultiEngine
+- a change to EngineIsKnown private function, now return true if != -1 (was == -2 before).
+So nothing you should care. But if you want do tricky things with it, dictatorai change it to a vehicleID to prevent others vehicle with that engine going to depot for upgrade. So as soon a vehicle exist, it has pass tests, and this value can be changed safely to anything except -1 now
+- fix bug with GetLength
