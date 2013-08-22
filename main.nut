@@ -360,9 +360,9 @@ class cEngineLib extends AIEngine
 					if (AIEngine.IsWagon(object.engine_id))
 							{ // find a train to pull that wagon
 							oTrain.engine_id = object.engine_id;
-							oTrain.engine_routetype = cEngineLib.GetBestRailType(object.engine_id);
+							oTrain.engine_roadtype = cEngineLib.GetBestRailType(object.engine_id);
 							back = cEngineLib.GetCallbackResult(filter_callback, filter_callback_train);
-							if (back != -1)	{ result.push(back); result.push(object.engine_id); result.push(oTrain.engine_routetype); return result; }
+							if (back != -1)	{ result.push(back); result.push(object.engine_id); result.push(oTrain.engine_roadtype); return result; }
 									else	{
 											cEngineLib.ErrorReport("No train that can pull that wagon : "+cEngineLib.EngineToName(object.engine_id));
 											return error;
