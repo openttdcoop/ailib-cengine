@@ -769,7 +769,7 @@ class cEngineLib extends AIEngine
 		if (cEngineLib.RailType.IsEmpty())	return -1;
 		cEngineLib.RailType.Sort(AIList.SORT_BY_VALUE, true);
 		if (engineID == -1)	return cEngineLib.RailType.Begin();
-		local train = cEngine.IsLocomotive(engineID);
+		local train = cEngineLib.IsLocomotive(engineID);
 		local top_rt = -1;
 		local best_rt = -1;
 		foreach (rt, spd in cEngineLib.RailType)
@@ -935,7 +935,7 @@ class cEngineLib extends AIEngine
 	function cEngineLib::EngineIsKnown(engine_id)
 	// return true if engine is already test
 	{
-		local obj = cEngine.Load(engine_id);
+		local obj = cEngineLib.Load(engine_id);
 		if (obj == null)	return false;
 		if (obj.is_known != -1)	return true;
 		return false;
