@@ -1061,8 +1061,9 @@ class  cEngineLib extends AIEngine
 	function cEngineLib::DirtyEngineCache(eng_type)
 	{
 	if (eng_type < ENGINETYPE.RAIL || eng_type > ENGINETYPE.RAILLOCO)	{ return; }
-	local special = [ENGINETYPE.RAIL, ENGINETYPE.RAILWAGON, ENGINETYPE.RAILLOCO];
-	if (eng_type in special)	{ // the 3 are links
+	//local special = [ENGINETYPE.RAIL, ENGINETYPE.RAILWAGON, ENGINETYPE.RAILLOCO];
+	if (eng_type == ENGINETYPE.RAIL || eng_type == ENGINETYPE.RAILLOCO || eng_type == ENGINETYPE.RAILWAGON)
+								{ // the 3 are links
 								cEngineLib.eng_cache[ENGINETYPE.RAIL] = null;
 								cEngineLib.eng_cache[ENGINETYPE.RAILWAGON] = null;
 								cEngineLib.eng_cache[ENGINETYPE.RAILLOCO] = null;
@@ -1073,21 +1074,24 @@ class  cEngineLib extends AIEngine
 	function cEngineLib::GetEngineList(eng_type)
 	{
 	if (eng_type < ENGINETYPE.RAIL || eng_type > ENGINETYPE.RAILLOCO)	{ return AIList(); }
-	local special = [ENGINETYPE.RAIL, ENGINETYPE.RAILWAGON, ENGINETYPE.RAILLOCO];
+	local special = AIList();
+	special.AddItem(ENGINETYPE.RAIL, 0);
+	special.AddItem(ENGINETYPE.RAILWAGON, 0);
+	special.AddItem(ENGINETYPE.RAILLOCO,0);
 	local elist = cEngineLib.eng_cache[eng_type];
     local safelist = cEngineLib.eng_cache[eng_type]; // We don't want return our list pointer so anyone can alter its content while playing with it
 	if (elist != null)
 		{
 		local now = AIDate.GetCurrentDate();
 		local old = elist.GetValue(elist.Begin());
-		if (eng_type in special)	{ old = cEngineLib.eng_cache[ENGINETYPE.RAIL].GetValue(cEngineLib.eng_cache[ENGINETYPE.RAIL].Begin()); }
+		if (special.HasItem(eng_type))	{ old = cEngineLib.eng_cache[ENGINETYPE.RAIL].GetValue(cEngineLib.eng_cache[ENGINETYPE.RAIL].Begin()); }
 		if (now - old > 7*74)	{ cEngineLib.DirtyEngineCache(eng_type); elist = null; }
 					else		{ elist = AIList(); elist.AddList(safelist); return elist; }
 		}
 	if (elist == null)
 		{
 		local vquery = eng_type;
-		local railhandling = (eng_type in special);
+		local railhandling = special.HasItem(eng_type);
 		if (railhandling)	{ vquery = ENGINETYPE.RAIL; }
 		safelist = AIEngineList(vquery);
 		if (railhandling)
@@ -1255,8 +1259,7 @@ class  cEngineLib extends AIEngine
 					}
 			else eo.depot = -1; // invalidate the depot
 			}
-		if (eo.engine_id != -1)	eo.engine_type = AIVehicle.VT_RAIL; // no need to test
-		if (eo.engine_type != AIVehicle.VT_RAIL)	eo.engine_id = -1;
+		if (eo.engine_type != AIVehicle.VT_RAIL)	eo.engine_id = -1; // only rail could let us search with a specific engine_id, other will always use -1
 	}
 
 /** @brief The class to create object that could be use by cEngineLib.GetBestEngine()
