@@ -16,3 +16,25 @@ v5:
 - a change to EngineIsKnown private function, now return true if != -1 (was == -2 before).
 So nothing you should care. But if you want do tricky things with it, dictatorai change it to a vehicleID to prevent others vehicle with that engine going to depot for upgrade. So as soon a vehicle exist, it has pass tests, and this value can be changed safely to anything except -1 now
 - fix bug with GetLength
+
+v6:
+- bugfixes
+
+v7:
+- bugfixes
+
+v8:
+- A lot of functions has been renamed to better match a standard, now functions using a vehicle_id as parameter are named Vehicle*
+* UpdateEngineProperties -> VehicleUpdateEngineProperties
+* CreateVehicle -> VehicleCreate (while this function doesn't use a vehicle_id, the name is better
+* IsMultiEngine -> VehicleIsMultiEngine
+* GetNumberOfLocomotive -> VehicleGetNumberOfLocomotive
+* GetNumberOfWagons -> VehicleGetNumberOfWagons
+* GetWagonFromVehicle -> VehicleGetRandomWagon
+* GetBestRailType -> RailTypeGetFastestType
+* RestrictLength_Vehicle -> VehicleRestrictLength
+* GetTrainMaximumSpeed -> RailTypeGetSpeed (it doesn't do what GetTrainMaximumSpeed was doing, but it replace it and can do the same)
+* RestrictLength_Wagons -> GetMaxWagons
+- A lot of new functions: VehicleGetWeight, VehicleGetMaxTractiveEffort, VehicleGetMaxPower, VehicleGetRailTypeUse, VehicleGetMaxSpeed, VehicleIsUnderpower, GetDepotType, DirtyEngineCache, GetEngineList
+- fixing bad comment on return value of GetNumberOfWagons
+- 

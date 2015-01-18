@@ -1,4 +1,4 @@
-/* -*- Mode: C++; tab-width: 4 -*- */ 
+/* -*- Mode: C++; tab-width: 4 -*- */
 /*
     This file is part of the AI library cEngineLib
     Copyright (C) 2013  krinn@chez.com
@@ -24,7 +24,7 @@ class cEngineLib extends AILibrary
     function GetName()        { return "cEngineLib"; }
     function GetShortName()   { return "CENG"; }
     function GetDescription() { return "A library providing tools to handle engines"; }
-    function GetVersion()     { return 7; }
+    function GetVersion()     { return 8; }
     function GetAPIVersion()  { return "1.2"; }
     function GetDate()        { return "2013-07-23"; }
     function CreateInstance() { return "cEngineLib"; }
