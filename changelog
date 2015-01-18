@@ -35,6 +35,6 @@ v8:
 * RestrictLength_Vehicle -> VehicleRestrictLength
 * GetTrainMaximumSpeed -> RailTypeGetSpeed (it doesn't do what GetTrainMaximumSpeed was doing, but it replace it and can do the same)
 * RestrictLength_Wagons -> GetMaxWagons
-- A lot of new functions: VehicleGetWeight, VehicleGetMaxTractiveEffort, VehicleGetMaxPower, VehicleGetRailTypeUse, VehicleGetMaxSpeed, VehicleIsUnderpower, GetDepotType, DirtyEngineCache, GetEngineList
+- A lot of new functions: VehicleGetWeight, VehicleGetMaxTractiveEffort, VehicleGetMaxPower, VehicleGetRailTypeUse, VehicleGetMaxSpeed, VehicleLackPower, GetDepotType, DirtyEngineCache, GetEngineList
 - fixing bad comment on return value of GetNumberOfWagons
 - 

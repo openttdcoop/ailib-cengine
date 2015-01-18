@@ -60,7 +60,7 @@ function myclass::myfilter(FilterList, engineobject)
 
 	FilterList.Valuate(AIEngine.GetMaxSpeed); // FilterList is an AIList holding a list of engine
 	FilterList.RemoveBelowValue(10);
-	
+
 	// now applying some heuristic
 	FilterList.Valuate(myclass.mysimpleheuristic, engineobject.cargo_id);
 	FilterList.Sort(AIList.SORT_BY_VALUE, false); // bigger number first, the function expect the 1st item to be the better
@@ -73,5 +73,5 @@ mywish.depot = x; // a valid depot. We could use mywish.depot = -1; to get theor
 mywish.cargo_id = z; // a valid cargo_id
 local besttram = cEngineLib.GetBestEngine(mywish, myclass.myfilter);
 if (besttram[0] == -1) { AILog.Info("error"); return; } // not enough money, filter was too hard and no engine match, or any other error
-if (cEngineLib.CreateVehicle(mywish.depot, besttram[0], mywish.cargo_id) == -1)	{} // error, else we get vehicleID...
+if (cEngineLib.VehicleCreate(mywish.depot, besttram[0], mywish.cargo_id) == -1)	{} // error, else we get vehicleID...
 
