@@ -1192,6 +1192,7 @@ class  cEngineLib extends AIEngine
 		this.cargo_capacity.SetValue(crgtype, AIEngine.GetCapacity(this.engine_id));
 		cEngineLib.enginedatabase[this.engine_id] <- this;
 		if (AIEngine.GetVehicleType(this.engine_id) == AIVehicle.VT_RAIL && !AIEngine.IsWagon(this.engine_id))	cEngineLib.SetRailTypeSpeed(this.engine_id);
+		cEngineLib.DirtyEngineCache(AIEngine.GetVehicleType(this.engine_id));
 		return true;
 	}
 
