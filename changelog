@@ -24,9 +24,9 @@ v7:
 - bugfixes
 
 v8:
-- A lot of functions has been renamed to better match a standard, now functions using a vehicle_id as parameter are named Vehicle*
+- A lot of functions has been renamed to better match a logic, now functions using a vehicle_id as parameter are named Vehicle*
 * UpdateEngineProperties -> VehicleUpdateEngineProperties
-* CreateVehicle -> VehicleCreate (while this function doesn't use a vehicle_id, the name is better
+* CreateVehicle -> VehicleCreate (while this function doesn't use a vehicle_id, the name is better)
 * IsMultiEngine -> VehicleIsMultiEngine
 * GetNumberOfLocomotive -> VehicleGetNumberOfLocomotive
 * GetNumberOfWagons -> VehicleGetNumberOfWagons
@@ -37,4 +37,3 @@ v8:
 * RestrictLength_Wagons -> GetMaxWagons
 - A lot of new functions: VehicleGetWeight, VehicleGetMaxTractiveEffort, VehicleGetMaxPower, VehicleGetRailTypeUse, VehicleGetMaxSpeed, VehicleLackPower, GetDepotType, DirtyEngineCache, GetEngineList
 - fixing bad comment on return value of GetNumberOfWagons
-- 
