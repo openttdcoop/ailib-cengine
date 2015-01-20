@@ -976,7 +976,7 @@ class  cEngineLib extends AIEngine
 	function cEngineLib::RailTypeGetFastestType(engineID = -1)
 	{
 		if (cEngineLib.RailType.IsEmpty())	return AIRail.RAILTYPE_INVALID;
-		cEngineLib.RailType.Sort(AIList.SORT_BY_VALUE, true);
+		cEngineLib.RailType.Sort(AIList.SORT_BY_VALUE, false);
 		if (engineID == -1)	return cEngineLib.RailType.Begin();
 		local train = cEngineLib.IsLocomotive(engineID);
 		local top_rt = -1;
