@@ -939,15 +939,15 @@ class  cEngineLib extends AIEngine
 		if (!AICargo.IsValidCargo(cargo_id))	return false;
 		if (!cEngineLib.IsLocomotive(engine_id))	return false;
 		local wagonlist = cEngineLib.GetEngineList(ENGINETYPE.RAILWAGON);
+		wagonlist.Valuate(AIEngine.CanRunOnRail, AIEngine.GetRailType(engine_id));
+		wagonlist.KeepValue(1);
+		wagonlist.Valuate(AIEngine.CanRefitCargo, cargo_id);
+		wagonlist.KeepValue(1);
 		wagonlist.Valuate(cEngineLib.AreEngineCompatible, engine_id);
 		wagonlist.KeepValue(1);
 		wagonlist.Valuate(cEngineLib.IsEngineBlacklist);
 		wagonlist.KeepValue(0);
-		wagonlist.Valuate(AIEngine.CanRefitCargo, cargo_id);
-		wagonlist.KeepValue(1);
 		wagonlist.Valuate(AIEngine.IsBuildable);
-		wagonlist.KeepValue(1);
-		wagonlist.Valuate(AIEngine.CanRunOnRail, AIEngine.GetRailType(engine_id));
 		wagonlist.KeepValue(1);
 		return (!wagonlist.IsEmpty());
 	}

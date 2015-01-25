@@ -37,3 +37,5 @@ v8:
 * RestrictLength_Wagons -> GetMaxWagons
 - A lot of new functions: VehicleGetWeight, VehicleGetMaxTractiveEffort, VehicleGetMaxPower, VehicleGetRailTypeUse, VehicleGetMaxSpeed, VehicleLackPower, GetDepotType, DirtyEngineCache, GetEngineList
 - fixing bad comment on return value of GetNumberOfWagons
+v9:
+- fixing invalid fastest railtype return when no engine is given (we were giving the slowest)
