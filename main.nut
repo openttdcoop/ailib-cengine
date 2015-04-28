@@ -87,7 +87,7 @@ class  cEngineLib extends AIEngine
      *               For VT_RAIL that function will be called with two different list, 1 for locomotive, and 2nd for the wagon. So be sure to check if IsWagon(object.engine_id) to see if you work for a train or a wagon.
 	 * @return An array with the best engines : [0]= -1 not found, [0]=engine_id water/air/road, rail : [0]=loco_id [1]=wagon_id [2] railtype
 	 */
-	function GetBestEngine(object, filter) {}
+	function GetBestEngine(object, filter);
 
 	/**
 	 * Change an ailist to filter out engine (so watchout what ailist you gives, it will get change)
@@ -98,7 +98,7 @@ class  cEngineLib extends AIEngine
 	 * @param engine_id : if -1 don't filter, if it's a wagon filter train that cannot pull it, if it's a train filter wagons unusuable with it
 	 * @param bypass : alter the cargo&train filter decision : see CanPullCargo bypass value for more
 	 */
-	function EngineFilter(engine_list, cargo_id, road_type, engine_id, bypass) {}
+	function EngineFilter(engine_list, cargo_id, road_type, engine_id, bypass);
 
 	/**
 	 * Create the vehicle at depot, upto you to add orders... It's internally use, but as you may like use it too, it's public
@@ -108,7 +108,7 @@ class  cEngineLib extends AIEngine
 	 * @param cargo_id if set to -1 you get just the vehicle, otherwise the engine will be refit to handle the cargo
 	 * @return vehileID of the new vehicle or -1 on error
 	 */
-	function VehicleCreate(depot, engine_id, cargo_id = -1) {}
+	function VehicleCreate(depot, engine_id, cargo_id = -1);
 
 	/**
 	 * Get the length of an engine when refit to handle cargo_id type
@@ -116,7 +116,7 @@ class  cEngineLib extends AIEngine
 	 * @param cargo_id the length of the engine when refit to that cargo, if -1 the length of the engine with its default cargo
 	 * @return length of engine or null on error
 	 */
-	function GetLength(engine_id, cargo_id = -1) {}
+	function GetLength(engine_id, cargo_id = -1);
 
 	/**
 	 * Get the capacity of an engine for that cargo type
@@ -124,7 +124,7 @@ class  cEngineLib extends AIEngine
 	 * @param cargo_id If -1, it's the current refit cargo, else the cargo id to get the capacity for.
 	 * @return the capacity, 0 if the cargo is not support or on error
 	 */
-	function GetCapacity(engine_id, cargo_id = -1) {}
+	function GetCapacity(engine_id, cargo_id = -1);
 
 	/**
 	 * Get the total weight of a vehicle : only for rail vehicle. The function takes freight_trains setting and if the cargo is freight to calc the weight. See: http://wiki.openttd.org/Freight_trains
@@ -133,14 +133,14 @@ class  cEngineLib extends AIEngine
 	 * @param empty true to get the total weight when empty, false to get the total weight when full (and this include filling loco with cargo if loco handle some)
 	 * @return the total of loco + all wagons weight of the vehicle, -1 on error
 	 */
-	function VehicleGetWeight(vehicle_id, empty = true) {}
+	function VehicleGetWeight(vehicle_id, empty = true);
 
 	/**
 	 * Get the total max tractive effort a vehicle handle (summing all engines values), only for rail and road vehicle
 	 * @param vehicle_id The vehicle id of a rail or road vehicle
 	 * @return the total tractive effort in KN, -1 on error, 0 if not a road or rail vehicle
 	 */
-	function VehicleGetMaxTractiveEffort(vehicle_id) {}
+	function VehicleGetMaxTractiveEffort(vehicle_id);
 
 	/**
 	 * Get the total power of a vehicle (summing all engines values), only for rail and road vehicle
@@ -148,42 +148,42 @@ class  cEngineLib extends AIEngine
 	 * @param KW Per default the function return power in HP (like the AI API), if set to true, you will get the power in KW and the return value will be a real
 	 * @return the total power of the vehicle in HP or KW, -1 on error, 0 if not a road or rail vehicle
 	 */
-	function VehicleGetMaxPower(vehicle_id, KW = false) {}
+	function VehicleGetMaxPower(vehicle_id, KW = false);
 
 	/**
 	 * Get the railtype the vehicle is running on (if you run a vehicle on different railtype, the answer will depend on which ones it was running when checked)
 	 * @param vehicle_id The vehicle id to get the RailType in use
 	 * @return the RailType in use, AIRail.RAILTYPE_INVALID on error
 	 */
-	function VehicleGetRailTypeUse(vehicle_id) {}
+	function VehicleGetRailTypeUse(vehicle_id);
 
 	/**
 	 * Return the maximum speed the vehicle can do with its engine, railtype and wagons in use. However it doesn't check if the engine has enough power to actually reach that limit. It takes the setting "wagon_speed_limits" (see http://wiki.openttd.org/Wagon_speed_limits) and the railtype limit.
 	 * @param vehicle_id The vehicle id to get its maximum speed. If the vehicle is not of AIVehicle.VT_RAIL it return the result of AIEngine.GetMaxSpeed
 	 * @return The maximum speed reachable by this rail vehicle. -1 on error.
 	 */
-	function VehicleGetMaxSpeed(vehicle_id) {}
+	function VehicleGetMaxSpeed(vehicle_id);
 
 	/**
 	 * Check if an engine is a locomotive
 	 * @param engine_id the engine to check
 	 * @return True if it's a locomotive, false if not or invalid...
 	 */
-	function IsLocomotive(engine_id) {}
+	function IsLocomotive(engine_id);
 
 	/**
 	 * Check if a train use multi locomotive or is multihead if the API support the function
 	 * @param vehicle_id the vehicle to check
 	 * @return True if it have more than 1 locomotive or 1 multihead, false for any others reason...
 	 */
-	function VehicleIsMultiEngine(vehicle_id) {}
+	function VehicleIsMultiEngine(vehicle_id);
 
 	/**
 	 * Get the number of locomotive a vehicle have: note that two heads engine will be count as two locomotives!
 	 * @param vehicle_id the vehicle to check, must be a rail vehicle
 	 * @return 0 if no locomotive/not a train, or the number of locomotive in the vehicle
 	 */
-	function VehicleGetNumberOfLocomotive(vehicle_id) {}
+	function VehicleGetNumberOfLocomotive(vehicle_id);
 
 	/**
 	 * Look at the given vehicle, get its first loco engine and return true if you lack enough power (for original acceleration model) or tractive effort (for realistic model) to run that vehicle at low speed on hills (at 15% of its maxspeed)
@@ -193,21 +193,21 @@ class  cEngineLib extends AIEngine
 	 * @param aim_speed The calc are base on a train ability to aim a certain mimimum speed when climbing with its load, per default (0) the aim_speed will be 15% of maximum speed of the train engine (and a non-alterable minimum of 15spd). You can pass your own custom aim_speed to use.
 	 * @return true if you should add more engine to that vehicle, -1 on error
 	 */
-	function VehicleLackPower(vehicle_id, aim_speed = 0) {}
+	function VehicleLackPower(vehicle_id, aim_speed = 0);
 
 	/**
 	 * Get the number of wagons a vehicle have
 	 * @param vehicle_id the vehicle to check, must be a rail vehicle
 	 * @return 0 if not a train or without wagon, or the number of wagons in the vehicle
 	 */
-	function VehicleGetNumberOfWagons(vehicle_id) {}
+	function VehicleGetNumberOfWagons(vehicle_id);
 
 	/**
 	 * Get the position of a wagon in the train
 	 * @param vehicle_id the vehicle to check, must be a rail vehicle
 	 * @return -1 if not a train or no wagon. A place (position) with a wagon in that train
 	 */
-	function VehicleGetRandomWagon(vehicle_id) {}
+	function VehicleGetRandomWagon(vehicle_id);
 
 	/**
 	 * Mark engine_one and engine_two not compatible with each other
@@ -215,7 +215,7 @@ class  cEngineLib extends AIEngine
 	 * @param engine_one engine id of the first engine
 	 * @param engine_two engine id of the second engine
 	 */
-	function IncompatibleEngine(engine_one, engine_two) {}
+	function IncompatibleEngine(engine_one, engine_two);
 
 	/**
 	 * Mark engine_one and engine_two compatible with each other
@@ -223,7 +223,7 @@ class  cEngineLib extends AIEngine
 	 * @param engine_one engine id of the first engine
 	 * @param engine_two engine id of the second engine
 	 */
-	function CompatibleEngine(engine_one, engine_two) {}
+	function CompatibleEngine(engine_one, engine_two);
 
 	/**
 	 * Check if engine1 is usable with engine2. For trains/wagons only.
@@ -231,7 +231,7 @@ class  cEngineLib extends AIEngine
 	 * @param compare_engine engine id of the second engine
 	 * @return true if you can use them, if we never check their compatibilities, it will return true
 	 */
-	function AreEngineCompatible(engine, compare_engine) {}
+	function AreEngineCompatible(engine, compare_engine);
 
 	/**
 	 * Test compatibilty of a wagon engine with the vehicle. For rails vehicle only. This autofill compatibilty state of both engines.
@@ -239,7 +239,7 @@ class  cEngineLib extends AIEngine
 	 * @param wagonID  the engine wagon type to test.
 	 * @return true if test succeed, false if test fail for some reason.
 	 */
-	function WagonCompatibilityTest(vehicleID, wagonID, cargoID) {}
+	function WagonCompatibilityTest(vehicleID, wagonID, cargoID);
 
 	/**
 	 * Get the cost of an engine, including cost to refit the engine to handle cargo_id
@@ -247,7 +247,7 @@ class  cEngineLib extends AIEngine
 	 * @param cargo_id The cargo you will use that engine with, if -1 the price of vehicle without refit
 	 * @return The cost or 0 on error
 	 */
-	function GetPrice(engine_id, cargo_id = -1)	{}
+	function GetPrice(engine_id, cargo_id = -1;
 
 	/**
 	 * Check if the engine can pull a wagon with the given cargo. Exactly the same as AIEngine.CanPullCargo if the bypass is set to false
@@ -259,20 +259,20 @@ class  cEngineLib extends AIEngine
 	 * @param bypass Set to false to respect newGRF author wishes, set it to true to allow bypassing the ai_special_flag
 	 * @return true or false
 	 */
-	function CanPullCargo(engine_id, cargo_id, bypass = false) {}
+	function CanPullCargo(engine_id, cargo_id, bypass = false);
 
 	/**
 	 * Return if that engine is blacklist or not
 	 * @param engine_id The engine to get check
 	 * @return True if engine is blacklist, false if not
 	 */
-	function IsEngineBlacklist(engine_id)	{}
+	function IsEngineBlacklist(engine_id);
 
 	/**
 	 * Add an engine to the blacklist
 	 * @param engine_id The engine to get blacklist
 	 */
-	function BlacklistEngine(engine_id)	{}
+	function BlacklistEngine(engine_id);
 
 	/**
 	 * Check if the tile is a depot
@@ -286,21 +286,21 @@ class  cEngineLib extends AIEngine
 	 * @param tile a valid tile, should be a tile with a depot
 	 * @return the type of depot found at tile (AIVehicle.VT_RAIL...) or -1 on error
 	 */
-	function GetDepotType(tile) {}
+	function GetDepotType(tile);
 
 	/**
-	 * This will browse railtype and return the railtype that can reach the fastest speed or the fastest railtype an given engine could use
+	 * This will browse railtype and return the railtype that can reach the fastest speed or the fastest railtype a given engine could use
 	 * @param engineID the engineID to get its best railtype to use with it, if -1 get the current fastest railtype
 	 * @return -1 if no railtype is found
 	 */
-	function RailTypeGetFastestType(engineID = -1)	{}
+	function RailTypeGetFastestType(engineID = -1);
 
 	/**
 	 * Return the speed of the given railtype, so to get the speed of the fastest current railtype, cEngineLib.RailTypeGetSpeed(cEngineLib.RailTypeGetFastestType());
-	 * @param RT The RailType to get the speed
+	 * @param RT The RailType to get the speed, if -1 we will return the fastest one.
 	 * @return -1 if no railtype is found
 	 */
-	function RailTypeGetSpeed(RT = -1)	{}
+	function RailTypeGetSpeed(RT = -1);
 
 	/**
 	 * This restrict a train length to met max_length, selling wagons only to met it
@@ -308,7 +308,7 @@ class  cEngineLib extends AIEngine
 	 * @param max_length The length to match : don't forget to x16 it if you aim a tile length: ie: limit to 3 tiles, max_length = 3*16
 	 * @return -1 if no change were made (because unneed or errors), else return the number of wagons removed
 	 */
-	function VehicleRestrictLength(vehicle_id, max_length)	{}
+	function VehicleRestrictLength(vehicle_id, max_length);
 
 	/**
 	 * Get the number of wagons we could add to stay below max_length. This may return inacurate results if the wagon or loco was never built.
@@ -317,39 +317,39 @@ class  cEngineLib extends AIEngine
 	 * @param cardo_id the cargo the wagon will use (default cargo if set to -1).
 	 * @return -1 on error, else return the maximum number of wagons usable with that length limit (don't forget to count also your loco length).
 	 */
-	function GetMaxWagons(engines, max_length, cargo_id = -1) {}
+	function GetMaxWagons(engines, max_length, cargo_id = -1);
 
 	/**
 	 * Enable or disable errors message. Those are only errors at using the API, not errors report by the NOAI API
 	 * @param output True and the API will output its errors messages. False to disable this. You can still get the last error with GetAPIError
 	 */
-	function SetAPIErrorHandling(output)	{}
+	function SetAPIErrorHandling(output);
 
 	/**
 	 * Get the last error string the API report
 	 * @return A string.
 	 */
-	function GetAPIError()	{}
+	function GetAPIError();
 
 	/**
 	 * This will browse engines so they are all added to the engine database, faster next access to any engine properties.
 	 * If you want use this, it should be called early in your AI, else its usage will get poorer while the API fill the database itself.
 	 */
-	function EngineCacheInit()	{}
+	function EngineCacheInit();
 
 	/**
 	 * This will dirty the cache of eng_type, forcing next access to the cache to sent fresh infos. Use it when engine list has change (new engine appears...)
 	 * The cache itself has a 7 openttd days lifetime ; but in case you don't wish to get a list 7 days old.
 	 * @param eng_type The engine type of cache to dirty. See GetEngineList for valid values.
 	 */
-	function DirtyEngineCache(eng_type) {}
+	function DirtyEngineCache(eng_type);
 
 	/**
 	 * Return a cached AIList of engines of the type "eng_type". Faster access to the very same list (less than 1 tick) and lesser this bug: http://bugs.openttd.org/task/6213
 	 * @param eng_type It could of type ENGINETYPE (see the enum at start of the lib) or AIVehicle.VehicleType (see http://noai.openttd.org/docs/trunk/classAIVehicle.html#cd95d6af61dddf43617178576d2e90a6), when you use AIVehicle.VT_RAIL's list it will also populate ENGINETYPE.RAILWAGON & ENGINETYPE.RAILLOCO lists, which are shorten rail engines lists with only wagons for the first and only locos for the second. So if you want a rail list of engines to find only wagons in it, just set eng_type to ENGINETYPE.RAILWAGON and you will get only a list of wagons. This could replace occurances of AIEngineList() in your code.
 	 * @return an AIList of engines of the eng_type type, on error you will get an empty AIList.
 	 */
-	function GetEngineList(eng_type) {}
+	function GetEngineList(eng_type);
 
 }
 
@@ -428,6 +428,7 @@ class  cEngineLib extends AIEngine
 			filter_callback_train[1] = oTrain;
 			filter_callback_wagon[0] = wagon_list;
 			filter_callback_wagon[1] = oWagon;
+			if (cEngineLib.RailType.IsEmpty())	{ cEngineLib.ErrorReport("No railtype can be found."); return error; }
 			}
 		if (object.depot == -1) // theorical results
 			{
@@ -475,9 +476,9 @@ class  cEngineLib extends AIEngine
 										else	railtype_list.AddItem(object.engine_roadtype,0);
 			save_train_list.AddList(train_list);
 			save_wagon_list.AddList(wagon_list);
-			foreach (RT, _ in railtype_list) // they are sort by first = best, last = poorest
+			foreach (RT, _ in railtype_list) // they are sort by first = fastest, last = slowest
 				{
-				oTrain.engine_roadtype = -1;
+				oTrain.engine_roadtype = RT;
 				train_list.AddList(save_train_list); // else list of trains may be too short as a call will lower the list
 				search_loco = cEngineLib.GetCallbackResult(filter_callback, filter_callback_train);
 				if (search_loco != -1) // found the best train using that railtype
@@ -527,19 +528,11 @@ class  cEngineLib extends AIEngine
 							{
 							wagon_list.Clear();
 							wagon_list.AddItem(object.engine_id,0);
-							if (wagon_list.IsEmpty())	{
-														cEngineLib.ErrorReport("No train that can pull that wagon : "+cEngineLib.EngineToName(object.engine_id));
-														return error;
-														}
 							oTrain.engine_id = object.engine_id;
 							}
 					else	{
 							train_list.Clear();
 							train_list.AddItem(object.engine_id,0);
-							if (train_list.IsEmpty())	{
-														cEngineLib.ErrorReport("No wagon usuable with that train : "+cEngineLib.EngineToName(object.engine_id));
-														return error;
-														}
 							oWagon.engine_id = object.engine_id;
 							}
 				}
@@ -782,6 +775,7 @@ class  cEngineLib extends AIEngine
 		local max_speed = -1;
 		local rt = cEngineLib.VehicleGetRailTypeUse(vehicle_id);
 		local rt_speed = cEngineLib.RailTypeGetSpeed(rt);
+		if (rt_speed == -1)	{ return AIEngine.GetMaxSpeed(AIVehicle.GetEngineType(vehicle_id)); } // if no railtype is found
 		for (local i = 0; i < browse; i++)
 			{
 			local eng = AIVehicle.GetWagonEngineType(i);
@@ -975,7 +969,7 @@ class  cEngineLib extends AIEngine
 
 	function cEngineLib::RailTypeGetFastestType(engineID = -1)
 	{
-		if (cEngineLib.RailType.IsEmpty())	return AIRail.RAILTYPE_INVALID;
+		if (cEngineLib.RailType.IsEmpty())	return -1;
 		cEngineLib.RailType.Sort(AIList.SORT_BY_VALUE, false);
 		if (engineID == -1)	return cEngineLib.RailType.Begin();
 		local train = cEngineLib.IsLocomotive(engineID);
@@ -993,9 +987,9 @@ class  cEngineLib extends AIEngine
 
 	function cEngineLib::RailTypeGetSpeed(RT = -1)
 	{
-		if (cEngineLib.RailType.IsEmpty())	return AIRail.RAILTYPE_INVALID;
+		if (cEngineLib.RailType.IsEmpty())	return -1;
 		if (RT == -1)	{
-						cEngineLib.RailType.Sort(AIList.SORT_BY_VALUE, true);
+						cEngineLib.RailType.Sort(AIList.SORT_BY_VALUE, false);
 						RT = cEngineLib.RailType.Begin();
 						}
 		return cEngineLib.RailType.GetValue(RT);
