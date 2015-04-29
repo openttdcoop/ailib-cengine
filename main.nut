@@ -247,7 +247,7 @@ class  cEngineLib extends AIEngine
 	 * @param cargo_id The cargo you will use that engine with, if -1 the price of vehicle without refit
 	 * @return The cost or 0 on error
 	 */
-	function GetPrice(engine_id, cargo_id = -1;
+	function GetPrice(engine_id, cargo_id = -1);
 
 	/**
 	 * Check if the engine can pull a wagon with the given cargo. Exactly the same as AIEngine.CanPullCargo if the bypass is set to false
