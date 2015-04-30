@@ -622,8 +622,11 @@ class  cEngineLib extends AIEngine
 					{ // apply filter if we need a special road type
 					if (engine_type == AIVehicle.VT_RAIL)
 							{
-							engine_list.Valuate(AIEngine.CanRunOnRail, road_type);
+							// Until prove false, HasPowerOnRail do a better job than CanRunOnRail : no diff with wagon if it can run on a rail, it has power on it
+							// While some loco may run on rail but with no power
+							engine_list.Valuate(AIEngine.HasPowerOnRail, road_type);
 							engine_list.KeepValue(1);
+							if
 							}
 					else	{ // a road engine
 							engine_list.Valuate(AIEngine.GetRoadType);
