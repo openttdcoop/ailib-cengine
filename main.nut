@@ -70,7 +70,7 @@ class  cEngineLib extends AIEngine
 
 	/**
 	 * This function autocreate vehicle (if need and allowed), check them, sell them and return the best vehicle (using the filter and valuator you wish). If you don't provide your own function, two defaults functions will be use, one for speed on locomotive only, and one for capacity on any other engines.
-	 * As this function could use your money, you MUST make sure the AI have enough money to buy stuff. This library doesn't handle loan itself.
+	 * As this function may use your money, make sure the AI have enough money to buy stuff. See SetMoneyCallBack
 	 * @param object
 	 * Here's the different options :
 	 * - object.depot : if valid, put a restriction to rail/road type. Really tests engines (and cost money). If -1 get theorical results only (accuracy depend on how many times the GetBestEngine has been run with a valid depot and new engine avaiability).
@@ -102,7 +102,7 @@ class  cEngineLib extends AIEngine
 
 	/**
 	 * Create the vehicle at depot, upto you to add orders... It's internally use, but as you may like use it too, it's public
-	 * As this function use your money, you MUST make sure the AI have enough money to buy stuff. This library doesn't handle loan itself.
+	 * As this function use your money, make sure the AI have enough money to buy stuff. See SetMoneyCallBack
 	 * @param depot a depot to use to create the vehicle
 	 * @param engine_id the engine to create the vehicle
 	 * @param cargo_id if set to -1 you get just the vehicle, otherwise the engine will be refit to handle the cargo
