@@ -37,5 +37,10 @@ v8:
 * RestrictLength_Wagons -> GetMaxWagons
 - A lot of new functions: VehicleGetWeight, VehicleGetMaxTractiveEffort, VehicleGetMaxPower, VehicleGetRailTypeUse, VehicleGetMaxSpeed, VehicleLackPower, GetDepotType, DirtyEngineCache, GetEngineList
 - fixing bad comment on return value of GetNumberOfWagons
+
 v9:
-- fixing invalid fastest railtype return when no engine is given (we were giving the slowest)
+- fix invalid fastest railtype return when no engine is given (we were giving the slowest)
+- Add a function to query money: cEngineLib.SetMoneyCallBack (see readme about money)
+- fix a bug where we don't set the loco engine railtype (while wagon was set) ending with sometimes a bad couple chosen
+- RailTypeGetSpeed will now return the speed of the fastest railtype if call with -1 parameter
+- Default filter now use HasPowerOnRail instead of CanRunOnRail against locos & wagons: the former can answer to both, the later only answer to wagons (i don't think anyone will need a loco that is not powered but that could run on some railtype)

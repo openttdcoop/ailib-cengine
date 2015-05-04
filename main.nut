@@ -36,7 +36,7 @@ class  cEngineLib extends AIEngine
 	static	enginedatabase = {};
 	static	EngineBL = AIList();
 	static	RailType = AIList();	/**< item = the railtype, value = maximum speed doable */
-	static	APIConfig = [false,""];	/**< hold configuration options and error message, you have functions to alter that. */
+	static	APIConfig = [false,"", null];	/**< hold configuration options and error message, you have functions to alter that. */
 	static	eng_cache = [null, null, null, null, null, null]; /**< we cache enginelist result here */
 
 	engine_id		= null;	/**< id of the engine */
@@ -330,6 +330,16 @@ class  cEngineLib extends AIEngine
 	 * @return A string.
 	 */
 	function GetAPIError();
+
+	/**
+	 * Set the API to use your money callback function, a function run by the API when it need to get money
+	 * The API doesn't check if it have the money, it ask what it will use, even it have enough already.
+	 * The callback function will be called with "amount" as parameter,
+	 * ie: cEngineLib.SetMoneyCallBack(myAI.MoneyGiver); with <function myAI::MoneyGiver(amount) { // grant the money }
+	 * @param money_func A valid function from your AI.
+	 * @return true if we have set it, false if we cannot
+	 */
+	function SetMoneyCallBack(money_func);
 
 	/**
 	 * This will browse engines so they are all added to the engine database, faster next access to any engine properties.
@@ -626,7 +636,6 @@ class  cEngineLib extends AIEngine
 							// While some loco may run on rail but with no power
 							engine_list.Valuate(AIEngine.HasPowerOnRail, road_type);
 							engine_list.KeepValue(1);
-							if
 							}
 					else	{ // a road engine
 							engine_list.Valuate(AIEngine.GetRoadType);
@@ -657,6 +666,7 @@ class  cEngineLib extends AIEngine
 	{
 		if (!AIEngine.IsValidEngine(engine_id))	return -1;
 		if (!cEngineLib.IsDepotTile(depot))	return -1;
+		cEngineLib.GetMoney(AIEngine.GetPrice(engine_id));
 		local vehID = AIVehicle.BuildVehicle(depot, engine_id);
 		if (!AIVehicle.IsValidVehicle(vehID))	return -1;
 		cEngineLib.VehicleUpdateEngineProperties(vehID);
@@ -1045,6 +1055,13 @@ class  cEngineLib extends AIEngine
 		return cEngineLib.APIConfig[1];
 	}
 
+	function cEngineLib::SetMoneyCallBack(money_func)
+	{
+		if (typeof(money_func) != "function")	return false;
+		cEngineLib.APIConfig[2] = money_func;
+		return true;
+	}
+
 	function cEngineLib::EngineCacheInit()
 	{
 		local cache = [AIVehicle.VT_ROAD, AIVehicle.VT_AIR, AIVehicle.VT_RAIL, AIVehicle.VT_WATER];
@@ -1257,6 +1274,14 @@ class  cEngineLib extends AIEngine
 			else eo.depot = -1; // invalidate the depot
 			}
 		if (eo.engine_type != AIVehicle.VT_RAIL)	eo.engine_id = -1; // only rail could let us search with a specific engine_id, other will always use -1
+	}
+
+	function cEngineLib::GetMoney(amount)
+	// this is the internal function that will call the user callback function to get more money
+	{
+        local callback = cEngineLib.APIConfig[2];
+        if (callback == null)	return;
+        callback(amount);
 	}
 
 /** @brief The class to create object that could be use by cEngineLib.GetBestEngine()

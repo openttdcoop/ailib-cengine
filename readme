@@ -3,7 +3,8 @@ You can download AIVehicleTest (bananas) if you want see how the library works w
 - Money
 Right now (and it will never be), the library doesn't handle your account. This mean that you must make sure a function that will use money have a good amount of cash available to use.
 The library try its best to not spend your money (buying & selling fast engine/wagon), but still need money :D
-I may add a function to allow the library to callback a "i want money" function from your AI if i see that need from users.
+I have add a money callback function, so when the library need money it will trigger your callback function to query the amount of money it need.
+The amount the library will ask is the amount it need, so it's not your current account + that amount, it's just that amount, the library doesn't check if it have that amount already avaialable or not, it just ask it, upto your callback function to not gives any if it's not need.
 
 - newGRF
 Many newGRF add weirdness at handling engines (like that loco cannot use that wagon...)
@@ -39,6 +40,9 @@ In theorical result : your best loco will be X, and your best wagon will be Y
 And in real result, in fact X cannot be use with Y, so difference is that you end with : best loco X best wagon Z or best loco H best wagon Y.
 And the lib gets more accurate then, and next theorical query will knows X cannot be use with Y and won't gave X+Y as answer.
 
+- About the cEngineLib.Infos object
+There's some checks that will validate what you set in your object before passing it, (see cEngineLib.CheckEngineObject), but avoid giving it conflictual values to avoid problems.
+
 - Finding best engine
 The lib depend then on how you handle your filtering of engine to find the best one, default filter remove incompatible engine, but if you build a custom filter that don't, the theorical result will always says X+Y, and the real result will find the good result, but after testing and see that XY isn't a possible couple, so you will just loose time & money and all the engines will be tested until one couple match.
 A bad filter that don't even check if the wagon can run on the same rails as the loco, would gave a XY bad couple.
@@ -49,7 +53,7 @@ Here's an example on using GetBestEngine() function using your own filter functi
 functio myclass::mysimpleheuristic(engine_id, cargo_id)
 {
 	local capacity = cEngineLib.GetCapacity(engine_id, cargo_id);
-	local speed = cEngineLib.GetMaxSpeed(engine_id);
+	local speed = cEngineLib.VehicleGetMaxSpeed(engine_id);
 	return (capacity * speed);
 }
 
