@@ -65,12 +65,10 @@ class  cEngineLib extends AIEngine
      * The learning is done at the given depot and it will create all engines it could with the money you have (and sell them fast to get your money back), keep in mind, that a rail depot is limited by its railtype, so you can't build (and learn) a maglev engine in a non maglev depot (look at engine == -2 for that). Because this function do all the job, the accuracy of all other functions of the lib will goes upto 100%
      * Unlike VehicleUpdateEngineProperties, this function also check compatibility of locos and wagons, making "bypass" usage 100% accurate.
 	 * @param depotID a valid depot of any type (an airport is a depot)
-	 * @param engineID	if a valid engineID is given it will test that engine only (but wagons will always be test), giving 100% accuracy result for this engine.
-	 *					if -1 it will test all engines at the given depot. This increase accuracy to 100% on all engines of that depot type ; except VT_RAIL that need more
-	 * @param unsafe To learn other engines that don't use the depot railtype, it will swap the depot to other railtype and test all engines... Once done it will swap the depot back to its original railtype. It is unsafe as if a train is able to enter the depot, this train may block the lib from restoring the depot, and other trains may not be able to enter it themselves, making that depot unusuable for them anymore. To prevent this we check the depot is empty before running that mode, but some vehicle could still enter it... You should use this mode with an unused depot.
-
+	 * @param engineID	if a valid engineID it will test that engine only (but also other known engines for new wagons), giving 100% accuracy result for this engine.
+	 *					if -1 it will test all engines from that depot. This increase accuracy to 100% on all engines of that depot type ; except VT_RAIL that need more.
 	 */
-	function LearnEngineFromDepot(depotID, engineID, unsafe = false);
+	function LearnEngineFromDepot(depotID, engineID);
 
 	/**
 	 * That function will let the library learn engines from existing vehicles
@@ -365,10 +363,9 @@ class  cEngineLib extends AIEngine
 
 	/**
 	 * Set the API to use your money callback function, a function run by the API when it need to get money
-	 * The API doesn't check if it have the money, it ask what it will use, even it have enough already.
 	 * The callback function will be called with "amount" as parameter,
 	 * ie: cEngineLib.SetMoneyCallBack(myAI.MoneyGiver); with <function myAI::MoneyGiver(amount) { // grant the money }
-	 * @param money_func A valid function from your AI.
+	 * @param money_func A valid function from your AI that should raise your account to to the wanted "amount" of money
 	 */
 	function SetMoneyCallBack(money_func);
 
@@ -387,7 +384,7 @@ class  cEngineLib extends AIEngine
 	function DirtyEngineCache(eng_type);
 
 	/**
-	 * Return a cache AIList of engines of the type "eng_type". Faster access to the very same list and lesser this effect http://bugs.openttd.org/task/6213 as you will work on a shorter list. Note that the lists are stock lists of engines EXCEPT they lack
+	 * Return a cache AIList of engines of the type "eng_type". Faster access to the very same list and lesser this effect http://bugs.openttd.org/task/6213 as you will work on a shorter list. Note that the lists are stock lists of engines EXCEPT blacklist engines that are remove from it (but it still include non buildable engine).
 	 * @param eng_type It could of AIVehicle.VT_RAIL, AIVehicle.VT_ROAD, AIVehicle.VT_WATER or AIVehicle.VT_AIR. But you can also use the special cEngineLib.VT_RAIL_LOCO to get only loco engine, or cEngineLib.VT_RAIL_WAGON to get only wagon engine. This should replace occurances of AIEngineList() in your code. To ease handling AIVehicle.VT_ have their cEngineLib.VT_ equivalent.
 	 * @return an AIList of engines of the eng_type type, on error you will get an empty AIList.
 	 */
@@ -400,7 +397,7 @@ class  cEngineLib extends AIEngine
 
 }
 
-	function cEngineLib::LearnEngineFromDepot(depotID, engineID, unsafe = false)
+	function cEngineLib::LearnEngineFromDepot(depotID, engineID)
 	// That's the learning part: it create all vehicles it doesn't know and look at their engine properties
 	{
 		local depot_type = cEngineLib.GetDepotType(depotID);
@@ -410,7 +407,7 @@ class  cEngineLib extends AIEngine
 			if (!AIEngine.IsValidEngine(engineID))	engineID = -1;
 			if (AIEngine.IsWagon(engineID))	return; // we don't need to learn from wagon engine
 			}
-		if (engineID < 0)	cEngineLib.DirtyEngineCache(depot_type); // use fresh lists
+		if (engineID == -1)	cEngineLib.DirtyEngineCache(depot_type); // use fresh lists
 		// do easy type first
 		if (depot_type != cEngineLib.VT_RAIL)
 			{
@@ -440,69 +437,43 @@ class  cEngineLib extends AIEngine
 			return;
 			}
 		// now the rail part
-		local save_depot_rt = AICompany.GetLoanInterval();
-		cEngineLib.GetMoney(save_depot_rt);
-		if (AICompany.GetBankBalance(AICompany.COMPANY_SELF) < save_depot_rt)	return; // no test need if we have no money at all
-		save_depot_rt = AIRail.GetRailType(depotID);
-		local current_depot_rt = save_depot_rt;
+		if (!cEngineLib.GetMoney(AICompany.GetLoanInterval()))	return; // no test need if we have no money at all
+		local depot_rt = AIRail.GetRailType(depotID);
 		local loco_list = cEngineLib.GetEngineList(cEngineLib.VT_RAIL_LOCO);
 		local wagon_list = cEngineLib.GetEngineList(cEngineLib.VT_RAIL_WAGON);
-		if (engineID >= 0)	{ loco_list = AIList(); loco_list.AddItem(engineID, 0); }
+		// Keep tracking loco we knows + the one user ask (to find new wagons for the loco we knows already)
+		if (engineID >= 0)	{ loco_list.Valuate(cEngineLib.EngineIsKnown); loco_list.KeepValue(1); loco_list.AddItem(engineID, 0); }
 		loco_list.Valuate(AIEngine.IsBuildable);
 		loco_list.KeepValue(1);
 		wagon_list.Valuate(AIEngine.IsBuildable);
 		wagon_list.KeepValue(1);
-        local all_rt = AIList();
-        all_rt.AddItem(save_depot_rt, 10000); // we add the original RT first, well, try not swap it for nothing
-		if (unsafe)	{
-					local veh = AIVehicleList();
-                    veh.Valuate(AIVehicle.GetLocation);
-                    veh.KeepValue(depotID);
-                    unsafe = veh.IsEmpty();
-                    }
-        if (unsafe)	all_rt.AddList(cEngineLib._cel_RT);
 		local loco_test = AIList();
 		local wagon_test = AIList();
-		foreach (RT, speed in all_rt)
+		loco_test.AddList(loco_list);
+		loco_test.Valuate(AIEngine.HasPowerOnRail, depot_rt);
+		loco_test.KeepValue(1);
+		// look for new locos
+		foreach (n_loco, _ in loco_test)
 			{
-            if (RT != current_depot_rt)
-				{
-				AIRail.ConvertRailType(depotID, depotID, RT);
-				current_depot_rt = AIRail.GetRailType(depotID);
-				if (RT != current_depot_rt)	continue;
-				}
-			loco_test.AddList(loco_list);
-			loco_test.Valuate(AIEngine.HasPowerOnRail, RT);
-			loco_test.KeepValue(1);
-			// look for new locos
-			foreach (n_loco, _ in loco_test)
-				{
-				local create_loco = false;
-				local loc_obj = cEngineLib.Load(n_loco);
-				if (loc_obj == null)	continue;
-				wagon_test.AddList(wagon_list);
-				wagon_test.Valuate(AIEngine.CanRunOnRail, RT);
-				wagon_test.KeepValue(1);
-				if (loc_obj.is_known != 2)	create_loco = true;
-									else	wagon_test.RemoveList(loc_obj.usuability);
-				loc_obj = null;
-                if (!wagon_test.IsEmpty())	create_loco = true;
-				if (create_loco)
+			local create_loco = false;
+			local loc_obj = cEngineLib.Load(n_loco);
+			if (loc_obj == null)	continue;
+			wagon_test.AddList(wagon_list);
+			wagon_test.Valuate(AIEngine.CanRunOnRail, depot_rt);
+			wagon_test.KeepValue(1);
+			if (loc_obj.is_known != 2)	create_loco = true;
+								else	wagon_test.RemoveList(loc_obj.usuability);
+			loc_obj = null;
+			if (!wagon_test.IsEmpty())	create_loco = true;
+			if (create_loco)
 					{
-					cEngineLib.GetMoney(AIEngine.GetPrice(n_loco));
+					if (!cEngineLib.GetMoney(AIEngine.GetPrice(n_loco)))	continue;
 					local vehicle_loco = AIVehicle.BuildVehicle(depotID, n_loco);
 					if (!AIVehicle.IsValidVehicle(vehicle_loco))	continue;
 					cEngineLib.VehicleUpdateEngineProperties(vehicle_loco);
 					foreach (wagon_id, _ in wagon_test)	cEngineLib.VehicleWagonCompatibilityTest(vehicle_loco, wagon_id);
 					AIVehicle.SellVehicle(vehicle_loco);
 					}
-				}
-			} // RT loop
-		for (local i = 0; i < 10; i++)
-			{		// This could fail, and we have no real way to help there, hmm, sorry?
-			if (AIRail.GetRailType(depotID) != save_depot_rt)	AIRail.ConvertRailType(depotID, depotID, save_depot_rt);
-			if (AIRail.GetRailType(depotID) == save_depot_rt)	break;
-			AIController.Sleep(15);
 			}
 	}
 
@@ -547,6 +518,7 @@ class  cEngineLib extends AIEngine
 	function cEngineLib::VehicleUpdateEngineProperties(veh_id)
 	{
 		if (!AIVehicle.IsValidVehicle(veh_id))	return;
+		if (AIVehicle.GetState(veh_id) != AIVehicle.VS_IN_DEPOT)	return;
 		local new_engine = AIVehicle.GetEngineType(veh_id);
 		local engObj = cEngineLib.Load(new_engine);
 		if (engObj == null || engObj.is_known != 0)	return;
@@ -681,7 +653,7 @@ class  cEngineLib extends AIEngine
 				{
 				local back = null;
 				confirm = false;
-				if (object.depot != -1 && !cEngineLib.EngineIsKnown(object.engine_id))	cEngineLib.LearnEngineFromDepot(object.depot, object.engine_id);
+				if (object.depot != -1)	cEngineLib.LearnEngineFromDepot(object.depot, object.engine_id);
 				if (AIEngine.IsWagon(object.engine_id))
 						{ // find a train to pull that wagon
 						do	{
@@ -1382,9 +1354,9 @@ class  cEngineLib extends AIEngine
 	function cEngineLib::Engine_Stats(engine_id)
 	{
 		local z = cEngineLib.Load(engine_id);
-		if (z == -1)	AILog.Info("engine #"+engine_id+" invalid");
+		if (z == null)	AILog.Info("engine #"+engine_id+" invalid");
 		local crg = AICargoList();
-		local r = cEngineLib.EngineToName(engine_id);
+		local r = cEngineLib.EngineToName(engine_id)+" ";
 		local isloco = false;
 		if (AIEngine.GetVehicleType(engine_id) == AIVehicle.VT_RAIL)
 			{
@@ -1504,6 +1476,7 @@ class  cEngineLib extends AIEngine
 			}
 		if (AIEngine.IsWagon(this.engine_id))	this.cargo_pull = cargobits; // not use, but it ease loco in @SetUsuability
 		local crgtype = AIEngine.GetCargoType(this.engine_id);
+		this.cargo_capacity.AddItem(crgtype, 255); // if it use that cargo, but is not refitable, it will miss to track it
 		this.cargo_capacity.SetValue(crgtype, AIEngine.GetCapacity(this.engine_id));
 		cEngineLib._cel_ebase[this.engine_id] <- this;
 		if (AIEngine.GetVehicleType(this.engine_id) == AIVehicle.VT_RAIL && !AIEngine.IsWagon(this.engine_id))	cEngineLib.SetRailTypeSpeed(this.engine_id);
@@ -1587,10 +1560,11 @@ class  cEngineLib extends AIEngine
 	function cEngineLib::GetMoney(amount)
 	// this is the internal function that will call the user callback function to get more money
 	{
-		if (AICompany.GetBankBalance(AICompany.COMPANY_SELF) >= amount)	return;
+		if (AICompany.GetBankBalance(AICompany.COMPANY_SELF) >= amount)	return true;
         local callback = cEngineLib._cel_config[2];
-        if (callback == null)	return;
+        if (callback == null)	return false;
         callback(amount);
+        return (AICompany.GetBankBalance(AICompany.COMPANY_SELF) >= amount);
 	}
 
 
