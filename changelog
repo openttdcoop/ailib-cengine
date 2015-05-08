@@ -44,3 +44,4 @@ v9:
 - fix a bug where we don't set the loco engine railtype (while wagon was set) ending with sometimes a bad couple chosen
 - RailTypeGetSpeed will now return the speed of the fastest railtype if call with -1 parameter
 - Default filter now use HasPowerOnRail instead of CanRunOnRail against locos & wagons: the former can answer to both, the later only answer to wagons (i don't think anyone will need a loco that is not powered but that could run on some railtype)
+- We don't track anymore the refit price per cargo, it just doesn't makes sense, no engine have any refit price base on its cargo, they do have length or capacity difference, but the refit cost itself never change and is 0.

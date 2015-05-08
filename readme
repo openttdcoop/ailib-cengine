@@ -31,6 +31,8 @@ class mybiggerobject extends cEngineLib.Infos
 		}
 }
 
+There's some checks that will validate what you set in your object before passing it, (see cEngineLib.CheckEngineObject), but avoid giving it conflictual values to get expected results (per example giving it a rail depot and setting a railtype different than the depot railtype will force the railtype to be the one of the depot)
+
 - Public and private functions
 Glad for you, squirrel doesn't have a real private/public handling, so you can use the private functions too. But remember private functions lack a lot of check and just assume most of the time that parameters are valid. It's not bad as the public functions using private functions makes the checks before calling them (well maybe not, but that would be a bug). So if you want use private functions, make sure you do checks before calling them, else unexpected results may goes upto the API crash (and it means your AI crash too)
 
@@ -39,9 +41,6 @@ Say you want carry wood with trains
 In theorical result : your best loco will be X, and your best wagon will be Y
 And in real result, in fact X cannot be use with Y, so difference is that you end with : best loco X best wagon Z or best loco H best wagon Y.
 And the lib gets more accurate then, and next theorical query will knows X cannot be use with Y and won't gave X+Y as answer.
-
-- About the cEngineLib.Infos object
-There's some checks that will validate what you set in your object before passing it, (see cEngineLib.CheckEngineObject), but avoid giving it conflictual values to avoid problems.
 
 - Finding best engine
 The lib depend then on how you handle your filtering of engine to find the best one, default filter remove incompatible engine, but if you build a custom filter that don't, the theorical result will always says X+Y, and the real result will find the good result, but after testing and see that XY isn't a possible couple, so you will just loose time & money and all the engines will be tested until one couple match.
