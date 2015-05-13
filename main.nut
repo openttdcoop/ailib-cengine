@@ -72,7 +72,7 @@ class  cEngineLib extends AIEngine
 
 	/**
 	 * That function will let the library learn engines from existing vehicles
-     * Unlike @LearnEngineFromDepot that will create vehicle to check them, this function use an existing vehicle to discover properties of engines in it. It is similar and actually do exactly the same as @VehicleUpdateEngineProperties on all vehicles type except rails as this function will also fill the compatibility of engine while the other cannot.
+     * This function use an existing vehicle to discover properties of engines in it. It is similar and actually do exactly the same as @VehicleUpdateEngineProperties on all vehicles type except rails as this function will also fill the compatibility of engine while the other cannot. So it use what was previously create to learn from it. If it find a depot it will called @LearnEngineFromDepot with the engineID taken from that vehicle.
      * Because it could be use with more than one vehicle, but also more than one vehicle type, it can learn from all vehicles in one go. Making it a good helper when your AI is loading a game and the lib can learn from what was create previously.
 	 * @param vehicleID if it's a valid vehicleID it will learn only from that vehicle
 	 * @param all_type if vehicleID is invalid only, all vehicles from the AIVehicle.VehicleType type will be check. With AIVehicle.VT_INVALID all vehicles of any type.
@@ -214,7 +214,7 @@ class  cEngineLib extends AIEngine
 	 * Look at the given vehicle, get its first loco engine and return true if you lack enough power (for original acceleration model) or tractive effort (for realistic model) to run that vehicle at low speed on hills (at ~15% of its maxspeed)
 	 * It handle the game setting "train_slope_steepness" (http://wiki.openttd.org/Train_slope_steepness)
 	 * It handle the "train_accelaration_model", increase x2 the aim speed when original model is use. (http://wiki.openttd.org/Realistic_acceleration)
-	 * Even its accuracy isn't that bad, don't take its number as-is but keep some limit on the return value, To simplify the example, if you need 1000hp to pull 5 wagons and use a loco with 100hp, it would then suggest you to use 10 locos, not really something usable.
+	 * Even its accuracy isn't that bad, don't take its "true" answer as-is but keep some limit, To simplify the example, if you need 1000hp to pull 5 wagons and use a loco with 100hp, it would then return true until you use 10 locos, not really something usable.
 	 * @param vehicle_id The vehicle id of a rail vehicle
 	 * @param aim_speed The calc are base on a train ability to aim a certain mimimum speed when climbing with its load, per default (0) the aim_speed will be 15% of maximum speed of the train engine (and a non-alterable minimum of 15spd). You can pass your own custom aim_speed to use.
 	 * @return true if you should add more engine to that vehicle, -1 on error
@@ -273,7 +273,7 @@ class  cEngineLib extends AIEngine
      * So, if the newGRF didn't disallow cargo/engine couple, but have its ai_special_flag set to disallow that, we could ignore it and pull the cargo we wish (as long as some compatible wagons exist to carry it). That's what the bypass param is for.
      * The trick to get the answer: if the loco can use wagonX and wagonX can be refit to potatoes, then loco is able to pull potatoes...
      * In order to know if wagonX can be use with that loco you need to test that with @VehicleWagonCompatibilityTest
-     * So until the loco has been test, the result accuracy is 0% and it will answer "true" to any cargos. Answering "true" will let your AI pickup that engine and build it (and normally test it so), making next query 100% accurate. It isn't the best, but it's the same for AIEngine.CanPullCargo that would tell "true" to a cargo the loco can pull, even no wagon exist that could be refit to that cargo. Making your AI creating a loco that is not usable. So i choose to return "true" instead of AIEngine.CanPullCargo when the loco hasn't been test yet (of course "false" isn't an acceptable return value, as the loco would tell it cannot pull anything).
+     * So until the loco has been test, the result is the one from AIEngine.CanPullCargo.
 	 * @param engine_id The engine to check
 	 * @param cargo_id The cargo to check
 	 * @param bypass Set to false to respect newGRF author wishes, set it to true to allow bypassing the ai_special_flag
@@ -309,6 +309,27 @@ class  cEngineLib extends AIEngine
 	function GetDepotType(tile);
 
 	/**
+	 * Answer if the current order (even not in its list) is going to depot and if it will stop there. Servicing at depot is not stopping at it.
+	 * @param vehicle_id the vehicle to check
+	 * @return true only if the vehicle is going to stop at a depot, false if it does not or on error.
+	 */
+	function VehicleIsGoingToStopInDepot(vehicle_id);
+
+	/**
+	 * Skip the current order in vehicle, it doesn't check any conditionnal orders and just jump to next order in position. If order was last, it jump to order 0
+	 * @param vehicle_id the vehicle to skip current order
+	 * @return the new order position, -1 on error (mostly, a vehicle with empty order, but anything: destination too far...).
+	 */
+	function VehicleOrderSkipCurrent(vehicle_id);
+
+	/**
+	 * Unshare and clear the order list of a vehicle
+	 * @param vehicle_id the vehicle to work on
+	 * @return true if order list is clear, false on error
+	 */
+	function VehicleOrderClear(vehicle_id);
+
+	/**
 	 * This will browse railtype and return the railtype that can reach the fastest speed or the fastest railtype a given engine could use
 	 * @param engineID the engineID to get its best railtype to use with it, if -1 get the current fastest railtype
 	 * @return -1 if no railtype is found
@@ -341,11 +362,11 @@ class  cEngineLib extends AIEngine
 	function VehicleRestrictLength(vehicle_id, max_length);
 
 	/**
-	 * Get the number of wagons we could add to stay below max_length. This may return inacurate results if the wagon or loco was never built.
+	 * Get the number of wagons we could add to stay below max_length. This will return inacurate results or error if the wagon or loco was never built.
 	 * @param engines an array with [0] the loco engine, and [1] the wagon engine. Accept also the array return by GetBestEngine function
 	 * @param max_length The length to match : don't forget to x16 it if you aim a tile length: ie: limit to 3 tiles, max_length = 3*16
 	 * @param cargo_id the cargo the wagon will use (-1 for default wagon size, because wagon size can change depending on the cargo use).
-	 * @return -1 on error, else return the maximum number of wagons usable with that length limit
+	 * @return -1 on error, else return the maximum number of wagons usable within that length limit
 	 */
 	function GetMaxWagons(engines, max_length, cargo_id = -1);
 
@@ -407,7 +428,7 @@ class  cEngineLib extends AIEngine
 			if (!AIEngine.IsValidEngine(engineID))	engineID = -1;
 			if (AIEngine.IsWagon(engineID))	return; // we don't need to learn from wagon engine
 			}
-		if (engineID == -1)	cEngineLib.DirtyEngineCache(depot_type); // use fresh lists
+		cEngineLib.DirtyEngineCache(depot_type); // use fresh lists
 		// do easy type first
 		if (depot_type != cEngineLib.VT_RAIL)
 			{
@@ -467,6 +488,7 @@ class  cEngineLib extends AIEngine
 			if (!wagon_test.IsEmpty())	create_loco = true;
 			if (create_loco)
 					{
+					print("Learning & Testing "+AIEngine.GetName(n_loco)+" with wagons: "+wagon_test.Count());
 					if (!cEngineLib.GetMoney(AIEngine.GetPrice(n_loco)))	continue;
 					local vehicle_loco = AIVehicle.BuildVehicle(depotID, n_loco);
 					if (!AIVehicle.IsValidVehicle(vehicle_loco))	continue;
@@ -500,16 +522,20 @@ class  cEngineLib extends AIEngine
 						}
 				foreach (loco, _ in loco_engine)
 						{
-						local e = cEngineLib.Load(loco);
-						if (e == null)	continue;
-                        foreach (cart, _ in wagon_engine)
-								{
-								local c = cEngineLib.Load(cart);
-								if (c == null)	continue;
-								e.usuability.AddItem(cart, 1);
-								e.cargo_pull = (e.cargo_pull | c.cargo_pull);
-								}
-						e.is_known = 2;
+						if (AIVehicle.IsStoppedInDepot(veh)) // got lucky!
+									cEngineLib.LearnEngineFromDepot(AIVehicle.GetLocation(veh), loco);
+							else	{
+									local e = cEngineLib.Load(loco);
+									if (e == null)	continue;
+									foreach (cart, _ in wagon_engine)
+										{
+										local c = cEngineLib.Load(cart);
+										if (c == null)	continue;
+										e.usuability.AddItem(cart, 1);
+										e.cargo_pull = (e.cargo_pull | c.cargo_pull);
+										}
+									e.is_known = 2;
+									}
 						}
 				}
 			}
@@ -735,7 +761,7 @@ class  cEngineLib extends AIEngine
 					train_list.AddList(save_train_list); // else list of trains may be too short as a call lower the list
 					search_loco = cEngineLib.GetCallbackResult(filter_callback, filter_callback_train);
 					print("found loco = "+cEngineLib.EngineToName(search_loco)+" for "+AIRail.GetName(RT));
-					if (oTrain.depot == -1 || search_loco == -1 || cEngineLib.EngineIsKnown(search_loco))	confirm = true;
+					if (oTrain.depot == -1 || search_loco == -1)	confirm = true;
 						if (!confirm)
 							{
 							cEngineLib.LearnEngineFromDepot(oTrain.depot, search_loco); // let it test our solve
@@ -751,6 +777,7 @@ class  cEngineLib extends AIEngine
 					oWagon.engine_id = search_loco;
 					wagon_list.AddList(save_wagon_list);
 					search_wagon = cEngineLib.GetCallbackResult(filter_callback, filter_callback_wagon);
+					print("found wagon: "+cEngineLib.EngineToName(search_wagon)+" cargo: "+oWagon.cargo_id);
 					if (search_wagon != 1) // found a good wagon to use with it
 						{
 						result.push(search_loco);
@@ -1097,7 +1124,7 @@ class  cEngineLib extends AIEngine
 	function cEngineLib::CanPullCargo(engine_id, cargo_id, bypass = false)
 	{
 		if (!bypass)	return ::AIEngine.CanPullCargo(engine_id, cargo_id);
-		if (!cEngineLib.EngineIsKnown(engine_id))	return true; // until we know the engine assume it can pull anything
+		if (!cEngineLib.EngineIsKnown(engine_id))	return ::AIEngine.CanPullCargo(engine_id, cargo_id);
 		if (!AICargo.IsValidCargo(cargo_id))	return false;
 		if (!cEngineLib.IsLocomotive(engine_id))	return false;
 		local loco = cEngine.Load(engine_id);
@@ -1124,6 +1151,33 @@ class  cEngineLib extends AIEngine
 		if (AIRail.IsRailDepotTile(depot))	return AIVehicle.VT_RAIL;
 		if (AIMarine.IsWaterDepotTile(depot))	return AIVehicle.VT_WATER;
 		return -1;
+	}
+
+    function cEngineLib::VehicleIsGoingToStopInDepot(vehicle_id)
+    {
+		if (!AIVehicle.IsValidVehicle(vehicle_id))	return false;
+		local flags = AIOrder.GetOrderFlags(vehicle_id, AIOrder.ORDER_CURRENT);
+        if ((flags & AIOrder.OF_GOTO_NEAREST_DEPOT) != 0)	return true;
+        if ((flags & AIOrder.OF_STOP_IN_DEPOT) != 0)	return true;
+		return false;
+    }
+
+	function cEngineLib::VehicleOrderSkipCurrent(vehicle_id)
+	{
+	local total = AIOrder.GetOrderCount(vehicle_id);
+	if (total == 0)	return -1;
+	local current = AIOrder.ResolveOrderPosition(vehicle_id, AIOrder.ORDER_CURRENT);
+	if (current + 1 == total)	current = 0;
+						else    current++;
+	if (AIOrder.SkipToOrder(vehicle_id, current))	return current;
+	return -1;
+	}
+
+	function cEngineLib::VehicleOrderClear(vehicle_id)
+	{
+		AIOrder.UnshareOrder(vehicle_id);
+		for (local i = 0; i < AIOrder.GetOrderCount(vehicle_id); i++)	AIOrder.RemoveOrder(vehicle_id, i);
+		return (AIOrder.GetOrderCount(vehicle_id) == 0);
 	}
 
 	function cEngineLib::RailTypeGetFastestType(engineID = -1)
@@ -1193,7 +1247,7 @@ class  cEngineLib extends AIEngine
 						cEngineLib.ErrorReport("Cannot delete that wagon : "+wagondelete);
 						break;
 						}
-				else	{ removed++; }
+				else	removed++;
 				}
     	return removed;
 	}
