@@ -1175,7 +1175,7 @@ class  cEngineLib extends AIEngine
 
 	function cEngineLib::VehicleOrderClear(vehicle_id)
 	{
-		AIOrder.UnshareOrder(vehicle_id);
+		AIOrder.UnshareOrders(vehicle_id);
 		for (local i = 0; i < AIOrder.GetOrderCount(vehicle_id); i++)	AIOrder.RemoveOrder(vehicle_id, i);
 		return (AIOrder.GetOrderCount(vehicle_id) == 0);
 	}
